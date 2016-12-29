@@ -254,8 +254,28 @@ suicides_11$ms <- as.integer(suicides_11$ms)
 
 ```
 
+##### Impute hispanic by place of Birth
 ```{r}
-summary(suicides_11)
+
+unique(suicides_11$hisp)
+
+table(suicides_11$pob[is.na(suicides_11$hisp)])
+
+tmpdata= suicides_11 %>% group_by(pob) %>% summarise(hisp = median(as.integer(hisp), na.rm = TRUE))
+  
+pob_hisp_1 <- tmpdata  %>% filter(hisp==1) %>% select(pob) %>% unlist
+pob_hisp_2 <- tmpdata %>% filter(hisp==2) %>% select(pob) %>% unlist
+pob_hisp_3 <- tmpdata %>% filter(hisp==3) %>% select(pob) %>% unlist
+
+suicides_11$hisp <- ifelse(is.na(suicides_11$hisp), 
+       ifelse(suicides_11$pob %in% pob_hisp_1, "1", 
+              ifelse(suicides_11$pob %in% pob_hisp_2, "2",
+                     ifelse(suicides_11$pob %in% pob_hisp_3, "3", suicides_11$hisp))), suicides_11$hisp)
+
+rm(list = c("pob_hisp_1", "pob_hisp_2", "pob_hisp_3"))
+
+suicides_11$hisp <- as.integer(suicides_11$hisp)
+
 ```
 
 #### Validate graphical summaries to observe the trends. 
