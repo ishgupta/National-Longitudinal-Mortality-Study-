@@ -159,10 +159,11 @@ suicides_11 <- suicides_11 %>% select(-inddea)
 
 #### 7. Impute missing values
 
-##### Validate Race on birth place
+##### Impute Race w.r.t birth place
 
 ```{r}
 unique(suicides_11$race)
+
 table(suicides_11$pob[is.na(suicides_11$race)])
 
 tmpdata= suicides_11 %>% group_by(pob) %>% summarise(race = median(as.integer(race), na.rm = TRUE))
@@ -180,32 +181,40 @@ suicides_11$race <- ifelse(is.na(suicides_11$race),
 
 rm(list = c("pob_race_1", "pob_race_2", "pob_race_4"))
 
-imputeMissingness <- function(data, missingValuesCol, refvalueCol){
-  refValues <- unlist(unique(refValueCol))
-  
-  tmp_data = data %>% group_by(refvalueCol) %>% summarise(missingValuesCol = median(as.integer(missingValuesCol), na.rm = TRUE))
-  replacement_values_from_missing_column = tmp_data %>% select(missingValuesCol) %>% distinct
-  
-  
-  if(!NA %in% refValues){
-    imputations = list()
-    
-    for(tmp in replacement_values_from_missing_column){
-      imputations[[tmp]] <- data %>% group_by(refvalueCol) %>% summarise(missingValuesCol = median(as.integer(missingValuesCol), na.rm = T)) %>% filter(missingValuesCol == tmp) %>% select(refvalueCol)
-    }
-    
-    data[missingValuesCol] <- ifelse(is.na(data[missingValuesCol]),
-                                     ifelse(),data[missingValuesCol])
-    
-  }
-  
-  
-}
+suicides_11$race <- as.integer(suicides_11$race)
+```
 
+
+###### Generic method to impute missing values
+```{r}
+imputeMissingness <- function(data, missingValuesCol, refvalueCol){
+    refValues <- unlist(unique(data[refValueCol]))
+    
+    tmp_data = data %>% group_by(data[refvalueCol]) %>% summarise(bestMatch = median(as.integer(data[missingValuesCol]), na.rm = TRUE))
+    
+    replacement_values_from_missing_column = tmp_data %>% select(bestMatch) %>% distinct
+    
+    
+    if(sum(is.na(refValues) == 0)){
+      imputations = list()
+      
+      for(tmp in replacement_values_from_missing_column){
+        imputations[[tmp]] <- tmp_data %>% filter(bestMatch == tmp) %>% select(refvalueCol)
+      }
+      
+      for(tmpValue in names(imputations)){
+        data[missingValuesCol] <- ifelse(is.na(data[missingValuesCol]),
+                                       ifelse(data[refvalueCol] %in% imputations[tmpValue], tmpValue, data[missingValuesCol]), data[missingValuesCol])
+      }
+    }
+    data
+}
 
 ```
 
-##### Validate Citizenship on Race
+
+
+##### Impute Citizenship w.r.t Race
 ```{r}
 table(suicides_11$citizen)
 
@@ -220,17 +229,39 @@ suicides_11 %>% group_by(race) %>% summarise(citizen = round(median(as.integer(c
 suicides_11$citizen <- ifelse(is.na(suicides_11$citizen), ifelse(suicides_11$race %in% c(1:4), 1, 3), suicides_11$citizen)
 ```
 
+
+
+##### Impute marital status w.r.t Age
+
+```{r}
+table(suicides_11$age, suicides_11$ms)
+
+suicides_11 %>% filter(age >=3 & age <=26) %>% select(ms, age)  %>% summarise(ms = median(ms, na.rm = T))
+# 3 to 26   ms = 5
+
+suicides_11 %>% filter(age >26 & age <=30) %>% select(ms, age)  %>% summarise(ms = median(ms, na.rm = T))
+# 26 to 30  ms =  3
+
+suicides_11 %>% filter(age >30 & age <=90) %>% select(ms, age)  %>% summarise(ms = median(ms, na.rm = T))
+# 30 to 90  ms =  1
+
+suicides_11$ms <- ifelse(is.na(suicides_11$ms), 
+   ifelse((suicides_11$age >=3 &  suicides_11$age <=26), "5",
+      ifelse((suicides_11$age > 26 &  suicides_11$age <= 30), "3", 
+          ifelse((suicides_11$age > 30 & suicides_11$age <= 90), "1", suicides_11$ms))), suicides_11$ms)
+
+suicides_11$ms <- as.integer(suicides_11$ms)
+
+```
+
 ```{r}
 summary(suicides_11)
 ```
 
-
-#### . Validate graphical summaries to know the trends. 
+#### Validate graphical summaries to observe the trends. 
 
 ##### Deaths due to Suicide vs. Health conditions.
 ```{r}
-
-
 suicides_11 %>% group_by(educ, citizen) %>% summarise(esr = round(median(as.integer(esr), na.rm = TRUE)))
 
 suicides_11$esr <- factor(suicides_11$esr, levels = c("Employed","Absent from work","Unemployed, looking for work","Disabled, unable to work","Retired, other (housekeeping, student, etc.)"))
@@ -248,26 +279,6 @@ ggplot(data = suicides_11, aes(x = health, fill=factor(esr))) +
 ```
 This tells most of the deaths have been in the category of people with Excellent, Good Health.
 
-
-##### Deaths due to Suicide vs. Citizenship.
-```{r}
-ggplot(data = suicides_11, aes(citizen, fll=cause113)) + geom_histogram()
-
-table(data_11_years$citizen)
-table(suicides_11$citizen)
-
-406059/length(data_11_years$citizen)  # 22%
-260/length(suicides_11$citizen)  #12%
-
-suicides_11 %>% filter(is.na(citizen)) %>% count()
-suicides_11 %>% count()
-
-1867/2139
-
-length(suicides_11$citizen)
-
-
-```
 
 #### Deaths due to Suicide vs. Education.
 ```{r}
