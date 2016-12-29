@@ -1,0 +1,638 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+### 1. Load required Libraries
+```{r, message = FALSE}
+require(readr, quietly = TRUE)
+require(data.table, quietly = TRUE)
+require(dplyr, quietly = TRUE)
+library(Amelia)
+library(ggplot2)
+library(caret)
+```
+
+### 2. Consolidate Column Classes
+
+```{r}
+#columnClasses=c('character','integer','factor','factor','factor','factor','factor','factor','factor','integer','character','integer','factor','factor','factor','factor','factor','factor','factor','factor','factor','factor','integer','factor','factor','factor','factor','factor','factor','factor','factor','factor','factor','factor','factor','factor','factor','character','character','character','character','character','character')
+
+#columnClasses = c('character','integer','integer','integer','integer','integer','integer','integer','integer','integer','character','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','integer','character','character','character','character','character','character')
+
+#columnClasses = c('character','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','character','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','numeric','character','character','character','character','character','character')
+
+columnClasses = c('character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character')
+
+```
+
+### 3. Load data for 11 years Survey, 6 years, and tobacco users
+
+```{r}
+if(file.exists("data/data_11_years.RData")){
+  load("data/data_11_years.RData")
+}
+
+if(!exists("data_11_years")){
+  #data_11_years <- read.csv("data/11.csv", colClasses = columnClasses, na.strings = c("NA", ""))
+  data_11_years <- read.csv("data/11.csv", na.strings = c("NA", ""))
+  
+  data_11_years$record <- as.integer(data_11_years$record)
+  data_11_years$age <- as.integer(data_11_years$age)
+  data_11_years$wt <- as.integer(data_11_years$wt)
+  data_11_years$hhid <- as.integer(data_11_years$hhid)
+  data_11_years$hhnum <- as.integer(data_11_years$hhnum)
+  data_11_years$agesmk <- as.integer(data_11_years$agesmk)
+  
+  save(data_11_years, file="data/data_11_years.RData")
+}
+
+```
+
+```{r}
+if(file.exists("data/data_6a.RData")){
+  load("data/data_6a.RData")
+}
+
+if(!exists("data_6a")){
+  #data_6a <- read.csv("data/6a.csv", colClasses = columnClasses, na.strings = c("NA", ""))
+  data_6a <- read.csv("data/6a.csv", na.strings = c("NA", ""))
+  data_6a$record <- as.integer(data_6a$record)
+  data_6a$age <- as.integer(data_6a$age)
+  data_6a$wt <- as.integer(data_6a$wt)
+  data_6a$hhid <- as.integer(data_6a$hhid)
+  data_6a$hhnum <- as.integer(data_6a$hhnum)
+  data_6a$agesmk <- as.integer(data_6a$agesmk)
+  
+  save(data_6a, file="data/data_6a.RData")
+}
+
+
+if(file.exists("data/data_6b.RData")){
+  load("data/data_6b.RData")
+}
+
+if(!exists("data_6b")){
+  #data_6b <- read.csv("data/6b.csv", colClasses = columnClasses, na.strings = c("NA", ""))
+  data_6b <- read.csv("data/6b.csv", na.strings = c("NA", ""))
+  data_6b$record <- as.integer(data_6b$record)
+  data_6b$age <- as.integer(data_6b$age)
+  data_6b$wt <- as.integer(data_6b$wt)
+  data_6b$hhid <- as.integer(data_6b$hhid)
+  data_6b$hhnum <- as.integer(data_6b$hhnum)
+  data_6b$agesmk <- as.integer(data_6b$agesmk)
+  
+  save(data_6b, file="data/data_6b.RData")
+}
+
+
+if(file.exists("data/data_6c.RData")){
+  load("data/data_6c.RData")
+}
+
+if(!exists("data_6c")){
+  #data_6c <- read.csv("data/6c.csv", colClasses = columnClasses, na.strings = c("NA", ""))
+  data_6c <- read.csv("data/6c.csv", na.strings = c("NA", ""))
+  data_6c$record <- as.integer(data_6c$record)
+  data_6c$age <- as.integer(data_6c$age)
+  data_6c$wt <- as.integer(data_6c$wt)
+  data_6c$hhid <- as.integer(data_6c$hhid)
+  data_6c$hhnum <- as.integer(data_6c$hhnum)
+  data_6c$agesmk <- as.integer(data_6c$agesmk)
+  
+  save(data_6c, file="data/data_6c.RData")
+}
+
+```
+
+```{r}
+if(file.exists("data/tobaccoUsers.RData")){
+  load("data/tobaccoUsers.RData")
+}
+
+if(!exists("tobaccoUsers")){
+  tobaccoUsers <- read.csv("data/tu.csv", colClasses = columnClasses)
+  
+  tobaccoUsers$record <- as.integer(tobaccoUsers$record)
+  tobaccoUsers$age <- as.integer(tobaccoUsers$age)
+  tobaccoUsers$wt <- as.integer(tobaccoUsers$wt)
+  tobaccoUsers$hhid <- as.integer(tobaccoUsers$hhid)
+  tobaccoUsers$hhnum <- as.integer(tobaccoUsers$hhnum)
+  tobaccoUsers$agesmk <- as.integer(tobaccoUsers$agesmk)
+  
+  save(tobaccoUsers, file="data/tobaccoUsers.RData")
+}
+```
+
+#### 4. Filter data for Suicides
+```{r}
+
+suicides_11 <- data_11_years[data_11_years$cause113 %in% c(105, 106), ]
+
+suicides_6 <- data_6a[data_6a$cause113 %in% c(105, 106), ]
+suicides_6 <- rbind(suicides_6, data_6b[data_6b$cause113 %in% c(105, 106), ])
+suicides_6 <- rbind(suicides_6, data_6c[data_6c$cause113 %in% c(105, 106), ])
+
+suicides_6$cause113 <- droplevels(suicides_6$cause113)
+
+suicides_tu <- tobaccoUsers[tobaccoUsers$cause113 %in% c(105, 106), ]
+suicides_tu$cause113 <- droplevels(suicides_tu$cause113)
+```
+
+#### 5. Remove superset Data
+
+```{r}
+rm(list = c("data_11_years", "data_6a", "data_6b", "data_6c", "tobaccoUsers"))
+```
+
+#### 6. Clean unwanted predictors in Suicide Data
+```{r}
+# remove non helpful predictors
+
+# ID
+suicides_11 <- suicides_11[, -1]
+
+# indicator for Dead or Alive? since the records are for all suicides, this becomes useless
+suicides_11 <- suicides_11 %>% select(-inddea)
+
+```
+
+#### 7. Impute missing values
+
+##### Validate Race on birth place
+
+```{r}
+unique(suicides_11$race)
+table(suicides_11$pob[is.na(suicides_11$race)])
+
+tmpdata= suicides_11 %>% group_by(pob) %>% summarise(race = median(as.integer(race), na.rm = TRUE))
+  
+pob_race_1 <- tmpdata  %>% filter(race==1) %>% select(pob) %>% unlist
+pob_race_2 <- tmpdata %>% filter(race==2) %>% select(pob) %>% unlist
+# pob_race_3 == 0 
+pob_race_4 <- tmpdata %>% filter(race==4) %>% select(pob) %>% unlist
+# pob_race_5 == 0
+
+suicides_11$race <- ifelse(is.na(suicides_11$race), 
+       ifelse(suicides_11$pob %in% pob_race_1, "1", 
+              ifelse(suicides_11$pob %in% pob_race_2, "2",
+                     ifelse(suicides_11$pob %in% pob_race_4, "4", suicides_11$race))), suicides_11$race)
+
+rm(list = c("pob_race_1", "pob_race_2", "pob_race_4"))
+
+imputeMissingness <- function(data, missingValuesCol, refvalueCol){
+  refValues <- unlist(unique(refValueCol))
+  
+  tmp_data = data %>% group_by(refvalueCol) %>% summarise(missingValuesCol = median(as.integer(missingValuesCol), na.rm = TRUE))
+  replacement_values_from_missing_column = tmp_data %>% select(missingValuesCol) %>% distinct
+  
+  
+  if(!NA %in% refValues){
+    imputations = list()
+    
+    for(tmp in replacement_values_from_missing_column){
+      imputations[[tmp]] <- data %>% group_by(refvalueCol) %>% summarise(missingValuesCol = median(as.integer(missingValuesCol), na.rm = T)) %>% filter(missingValuesCol == tmp) %>% select(refvalueCol)
+    }
+    
+    data[missingValuesCol] <- ifelse(is.na(data[missingValuesCol]),
+                                     ifelse(),data[missingValuesCol])
+    
+  }
+  
+  
+}
+
+
+```
+
+##### Validate Citizenship on Race
+```{r}
+table(suicides_11$citizen)
+
+# Citizenship for people Race wise:
+table(suicides_11$race[is.na(suicides_11$citizen)])
+
+#Citizenship for most of the people == 1(Native, born in the U.S.)
+median(suicides_11$citizen, na.rm = T)
+
+suicides_11 %>% group_by(race) %>% summarise(citizen = round(median(as.integer(citizen), na.rm = TRUE)))
+
+suicides_11$citizen <- ifelse(is.na(suicides_11$citizen), ifelse(suicides_11$race %in% c(1:4), 1, 3), suicides_11$citizen)
+```
+
+```{r}
+summary(suicides_11)
+```
+
+
+#### . Validate graphical summaries to know the trends. 
+
+##### Deaths due to Suicide vs. Health conditions.
+```{r}
+
+
+suicides_11 %>% group_by(educ, citizen) %>% summarise(esr = round(median(as.integer(esr), na.rm = TRUE)))
+
+suicides_11$esr <- factor(suicides_11$esr, levels = c("Employed","Absent from work","Unemployed, looking for work","Disabled, unable to work","Retired, other (housekeeping, student, etc.)"))
+
+table(suicides_11$esr)
+
+suicides_11$citizen <- factor(suicides_11$citizen[!is.na(suicides_11$citizen)], levels = c("Excellent","Very good","Good","Fair","Poor"))
+
+ggplot(data = suicides_11, aes(x = health, fill=factor(esr))) + 
+  geom_histogram(aes(y = ..count../sum(..count..)), binwidth = 1, position = "fill") + 
+    labs(title= "Suiciders Health, Employment Status and Citizenship", y = "Frequency") + 
+      scale_fill_brewer("Health", palette = "Reds") + 
+        facet_grid(citizen ~ .)
+
+```
+This tells most of the deaths have been in the category of people with Excellent, Good Health.
+
+
+##### Deaths due to Suicide vs. Citizenship.
+```{r}
+ggplot(data = suicides_11, aes(citizen, fll=cause113)) + geom_histogram()
+
+table(data_11_years$citizen)
+table(suicides_11$citizen)
+
+406059/length(data_11_years$citizen)  # 22%
+260/length(suicides_11$citizen)  #12%
+
+suicides_11 %>% filter(is.na(citizen)) %>% count()
+suicides_11 %>% count()
+
+1867/2139
+
+length(suicides_11$citizen)
+
+
+```
+
+#### Deaths due to Suicide vs. Education.
+```{r}
+ggplot(data = suicides_11, aes(educ, col=cause113)) + geom_histogram()
+
+```
+
+
+### Employement Status Record
+```{r}
+ggplot(data= suicides_11, aes(esr)) + geom_histogram() + labs(title = "Employment Status Record")
+ggplot(data= suicides_11, aes(age)) + geom_histogram(binwidth = 1) + labs(title = "Age")
+
+
+ggplot(data= suicides_11, aes(race)) + geom_histogram() + labs(title = "Race")
+
+ggplot(data= suicides_11, aes(ssnyn)) + geom_histogram() + labs(title = "Social Security Number?")
+
+ggplot(data= suicides_11, aes(urban)) + geom_histogram() + labs(title = "Urban=1 /Rural = 0")
+
+ggplot(data= suicides_11, aes(sex)) + geom_histogram() + labs(title = "Gender")
+ggplot(data= suicides_11, aes(pob)) + geom_histogram() + labs(title = "Place of Birth")
+
+ggplot(data= suicides_11, aes(ms)) + geom_histogram() + labs(title = "Marital Status")
+
+ggplot(data= suicides_11, aes(reltrf)) + geom_histogram() + labs(title = "Relationship to reference person within the household")
+ggplot(data= suicides_11, aes(hhnum)) + geom_histogram() + labs(title = "Number of People in Household")
+
+ggplot(data= suicides_11, aes(tenure)) + geom_histogram() + labs(title = "Housing Tenure")
+
+ggplot(data= suicides_11, aes(majind)) + geom_histogram() + labs(title = "Major Industry Code")
+
+ggplot(data= suicides_11, aes(rcow)) + geom_histogram() + labs(title = "Recoded Class of Worker")
+
+ggplot(data= suicides_11, aes(y = factor(rcow), x = age, col= factor(cause113))) + geom_point() + labs(title = "Recoded Class of Worker ~ Age", y = "Recoded Class of Worker")
+
+ggplot(data= suicides_11, aes(histatus)) + geom_histogram() + labs(title = "had Insurance?")
+
+ggplot(data= suicides_11, aes(hitype, fill = factor(hospd))) + geom_histogram() + labs(title = "Health Insurance type")
+
+ggplot(data= suicides_11, aes(hospd)) + geom_histogram() + labs(title = "Hospital Death Indicator")
+
+
+ggplot(data= suicides_tu, aes(as.integer(smok100))) + geom_histogram() + labs(title = "Smoked More than 100 Cigarettes")
+
+ggplot(data= suicides_tu, aes(as.integer(agesmk))) + geom_histogram() + labs(title = "Age Started Smoking")
+
+ggplot(data= suicides_tu, aes(as.integer(smokstat))) + geom_histogram() + labs(title = "Smoke Currently?")
+
+table(suicides_tu$smokstat)
+
+89/length(suicides_tu$smokstat)
+96/length(suicides_tu$smokstat)
+
+ggplot(data= suicides_tu, aes(as.integer(smokhome))) + geom_histogram() + labs(title = "Age Started Smoking")
+ggplot(data= suicides_tu, aes(as.integer(curruse))) + geom_histogram() + labs(title = "Currently Use Smokeless Tobacco?")
+
+ggplot(data= suicides_tu, aes(as.integer(everuse))) + geom_histogram() + labs(title = "Ever Use Smokeless Tobacco?")
+
+ggplot(data = suicides_tu, aes(x = agesmk, y = factor(hitype), col = factor(urban))) + geom_point()
+
+ggplot(data=suicides_11, aes(age, fill = factor(hitype))) + geom_histogram(aes(y= ..age../sum(..age..)), binwidth = 1, position = "fill")
+
+ggplot(data= suicides_tu, aes(as.integer(agesmk), fill=smokstat)) + geom_histogram() + labs(title = "Age Started Smoking, and does ze smoke currently?")
+
+```
+
+
+#### 7. Create a model
+```{r}
+customControl = trainControl(method= "cv", number = 10, summaryFunction = twoClassSummary, classProbs = TRUE, verboseIter = TRUE)
+
+tmp <- suicides_11
+tmp$cause113 <- as.integer(tmp$cause113)
+tmp$cause113[tmp$cause113==105] <- 1
+tmp$cause113[tmp$cause113==106] <- 2
+tmp$cause113 <- as.factor(tmp$cause113)
+contrasts(tmp$cause113)
+
+is.factor(tmp$cause113)
+unique(tmp$cause113)
+levels(tmp$cause113)
+
+fact <- lapply(tmp, is.factor)
+unlist(fact)
+tmp[, unlist(fact)] <- lapply(tmp[, unlist(fact)], as.integer)
+
+cor(as.integer(suicides_11$cause113), suicides_11$age)
+
+summary(tmp$cause113)
+
+lm.fit <- lm(cause113 ~ ., data = suicides_11)
+
+glm.fit <- glm(cause113 ~ age + sex + inddea + smok100, data=suicides_11, family = "binomial")
+
+model <- train(cause113 ~ ., data = suicides_11, method = "glmnet", trControl = customControl, tuneGrid = expand.grid(alpha =  0:1, lambda = seq(0.0001, 1, length = 20)))
+
+```
+
+
+
+### Filter selected causes of death.
+
+```{r}
+causesOfdeath <- read_csv("data/causesOfDeath.csv")
+
+selectedCausesOfDeath = c(4, 6, 32, 43, 44, 49, 50, 51, 52, 53, 54, 55, 58, 59, 60, 68, 69, 72, 73, 76, 83, 84, 85, 86, 87)
+
+selectedCausesDescription <- causesOfdeath %>% filter(CauseID %in% selectedCausesOfDeath)
+
+write.csv(selectedCausesDescription, "selectedCausesOfDeath.csv")
+
+subset <- data_11_years %>% filter(cause113 %in% selectedCausesOfDeath)
+
+glimpse(subset)
+
+ggplot(data = subset, aes(y = inddea, x = esr, col=cause113)) + geom_jitter()
+```
+
+### filter causes of death from 6 years follow up
+```{r}
+data_6a <- read_csv("data/6a.csv")
+
+data_6a$cause113 <- as.integer(data_6a$cause113)
+
+subset_6_1 <- data_6a %>% filter(cause113 %in% selectedCausesOfDeath)
+
+str(subset_6_1)
+
+subset_6_1$esr <- as.factor(subset_6_1$esr)
+subset_6_1$inddea <- as.factor(subset_6_1$inddea)
+subset_6_1$cause113 <- as.factor(subset_6_1$cause113)
+
+ggplot(data = subset_6_1, aes(y = inddea, x = esr, col=cause113)) + geom_jitter()
+```
+
+### filter causes of death in Tobacco users
+```{r}
+
+tu <- read_csv("data/tu.csv")
+
+table(tu$cause113)
+
+tu$cause113 <- as.factor(tu$cause113)
+tu$esr <- as.factor(tu$esr)
+tu$inddea <- as.factor(tu$inddea)
+
+subset_tu <- tu %>% filter(cause113 %in% selectedCausesOfDeath)
+
+str(subset_tu)
+
+ggplot(data = subset_tu, aes(y = inddea, x = esr, col=cause113)) + geom_jitter()
+```
+
+
+### Deaths becuase of Suicides.
+```{r}
+table(data_11_years$cause113)
+cause <- c(105,106)
+suicide <- data_11_years%>%filter(cause113 %in% cause)
+suicide$cause113 <- as.factor(suicide$cause113)
+suicide$inddea <- as.factor(suicide$inddea)
+suicide$esr <- as.factor(suicide$esr)
+suicide$health <- as.factor(suicide$health)
+suicide$citizen <- as.factor(suicide$citizen)
+suicide$educ <- as.factor(suicide$educ)
+
+table(suicide$sex)
+```
+
+
+
+### EDA
+```{r}
+# The max follow up period is of 4018 days or 11 years. The people who could not be followed for the complete duration are those who could not survive the Duration.
+peopleWhoDied <- data_11_years %>% filter(follow < 4018)
+peopleWhoSurvived <- data_11_years %>% filter(follow == 4018)
+
+geography <- unique(data_11_years$smsast)
+summary(geography)
+
+peopleWhoDied$adjinc <- as.integer(peopleWhoDied$adjinc)
+peopleWhoSurvived$adjinc <- as.integer(peopleWhoSurvived$adjinc)
+
+mfrow = c(1,2) 
+hist(peopleWhoDied$adjinc, type="l")
+
+hist(peopleWhoSurvived$adjinc)
+
+ggplot(aes(y = factor(inddea), x = adjinc), data = data_11_years) + geom_point(alpha = 0.1)
+
+unique(data_11_years$follow)
+ggplot(data_11_years, aes(x = follow, col=inddea)) + geom_histogram()
+
+```
+
+```{r}
+data_11_years <- subsetData
+glimpse(data_11_years)
+
+unique(data_11_years[,38:43])
+data_11_years <- data_11_years[, -c(1, 38:43)]
+
+glimpse(data_11_years)
+
+charColumns <- lapply(data_11_years, is.character)
+
+```
+
+```{r}
+parseToInt <- function(data, ncol){
+  i = 0
+  q = ncol %/% 10
+  r = ncol %% 10
+  
+  while(i < q){
+    tmp <- data[, i*10 + 1 : i*10 + 10]
+    
+    for(i in tmp){
+      if(is.character(i)){
+        i <- as.integer(i)
+      }
+    }
+    #tmp <- lapply(tmp, as.integer)
+    
+    data[, i*10 + 1 : i*10 + 10] <- tmp
+    
+    i = i+1
+  }
+  
+  i = 1
+  while(i < r){
+    tmp <- data[, ncol - r : r]
+    
+    for(i in tmp){
+      if(is.character(i)){
+        i <- as.integer(i)
+      }
+    }
+    
+    #tmp <- lapply(tmp, as.integer)
+    
+    data[, ncol - r : r] <- tmp
+  }
+  data
+}
+
+```
+
+```{r}
+
+data_11_years_tmp <- parseToInt(data_11_years, ncol(data_11_years))
+
+
+data_11_years_tmp[, 1:10] <- lapply(data_11_years[, 1:10], as.integer)
+data_11_years_tmp[, 11:20] <- lapply(data_11_years[, 11:20], as.integer)
+data_11_years_tmp[, 21:30] <- lapply(data_11_years[, 21:30], as.integer)
+data_11_years_tmp[, 31:36] <- lapply(data_11_years[, 31:36], as.integer)
+
+glimpse(data_11_years_tmp)
+
+```
+
+```{r}
+#data_11_years_tmp$age <- ifelse(is.na(data_11_years_tmp$age), median(data_11_years_tmp$age), data_11_years_tmp$age)
+
+#lapply(data_11_years_tmp, as.integer)
+#identical(data_11_years_tmp$age, as.integer(unlist(data_11_years_tmp[1])))
+
+#median(data_11_years_tmp[1])
+
+
+#for(i in ncol(data_11_years_tmp)){
+  #names(data_11_years_tmp)[i]
+  #data_11_years_tmp[i] <- ifelse(is.na(data_11_years_tmp[i]), 
+                                 #ifelse(is.integer(unlist(data_11_years_tmp[i])), 
+                                        #median(data_11_years_tmp[i]), median(unlist(as.integer(data_11_years_tmp[i])))),
+                                  #data_11_years_tmp[i])  
+#}
+
+
+```
+
+```{r}
+wssplot <- function(data, nc=15, seed=1234){
+  
+  wss <- (nrow(data) - 1) * sum(apply(data, 2, var, na.rm = TRUE))
+  for (i in 2:nc){
+    set.seed(seed)
+    wss[i] <- sum(kmeans(data, centers=i)$withinss)
+  }
+  
+  plot(1:nc, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+}
+
+```
+
+```{r}
+summary(data_11_years_tmp)
+```
+
+```{r}
+data_11_years_tmp$race[is.na(data_11_years_tmp$race)] <- median(data_11_years_tmp$race, na.rm = TRUE)
+data_11_years_tmp$ms[is.na(data_11_years_tmp$ms)] <- median(data_11_years_tmp$ms, na.rm = TRUE)
+data_11_years_tmp$hisp[is.na(data_11_years_tmp$hisp)] <- median(data_11_years_tmp$hisp, na.rm = TRUE)
+data_11_years_tmp$adjinc[is.na(data_11_years_tmp$adjinc)] <- median(data_11_years_tmp$adjinc, na.rm = TRUE)
+data_11_years_tmp$educ[is.na(data_11_years_tmp$educ)] <- median(data_11_years_tmp$educ, na.rm = TRUE)
+data_11_years_tmp$reltrf[is.na(data_11_years_tmp$reltrf)] <- median(data_11_years_tmp$reltrf, na.rm = TRUE)
+data_11_years_tmp$occ[is.na(data_11_years_tmp$occ)] <- median(data_11_years_tmp$occ, na.rm = TRUE)
+data_11_years_tmp$majocc[is.na(data_11_years_tmp$majocc)] <- median(data_11_years_tmp$majocc, na.rm = TRUE)
+data_11_years_tmp$ind[is.na(data_11_years_tmp$ind)] <- median(data_11_years_tmp$ind, na.rm = TRUE)
+data_11_years_tmp$majind[is.na(data_11_years_tmp$majind)] <- median(data_11_years_tmp$majind, na.rm = TRUE)
+data_11_years_tmp$esr[is.na(data_11_years_tmp$esr)] <- median(data_11_years_tmp$esr, na.rm = TRUE)
+data_11_years_tmp$urban[is.na(data_11_years_tmp$urban)] <- median(data_11_years_tmp$urban, na.rm = TRUE)
+data_11_years_tmp$smsast[is.na(data_11_years_tmp$smsast)] <- median(data_11_years_tmp$smsast, na.rm = TRUE)
+data_11_years_tmp$dayod[is.na(data_11_years_tmp$dayod)] <- median(data_11_years_tmp$dayod, na.rm = TRUE)
+data_11_years_tmp$hosp[is.na(data_11_years_tmp$hosp)] <- median(data_11_years_tmp$hosp, na.rm = TRUE)
+data_11_years_tmp$hospd[is.na(data_11_years_tmp$hospd)] <- median(data_11_years_tmp$hospd, na.rm = TRUE)
+data_11_years_tmp$vt[is.na(data_11_years_tmp$vt)] <- median(data_11_years_tmp$vt, na.rm = TRUE)
+data_11_years_tmp$histatus[is.na(data_11_years_tmp$histatus)] <- median(data_11_years_tmp$histatus, na.rm = TRUE)
+data_11_years_tmp$hitype[is.na(data_11_years_tmp$hitype)] <- median(data_11_years_tmp$hitype, na.rm = TRUE)
+data_11_years_tmp$rcow[is.na(data_11_years_tmp$rcow)] <- median(data_11_years_tmp$rcow, na.rm = TRUE)
+data_11_years_tmp$tenure[is.na(data_11_years_tmp$tenure)] <- median(data_11_years_tmp$tenure, na.rm = TRUE)
+data_11_years_tmp$citizen[is.na(data_11_years_tmp$citizen)] <- median(data_11_years_tmp$citizen, na.rm = TRUE)
+data_11_years_tmp$health[is.na(data_11_years_tmp$health)] <- median(data_11_years_tmp$health, na.rm = TRUE)
+data_11_years_tmp$indalg[is.na(data_11_years_tmp$indalg)] <- median(data_11_years_tmp$indalg, na.rm = TRUE)
+
+
+data_11_years_scaled <- scale(data_11_years_tmp, scale = TRUE)
+
+tmp <- apply(data_11_years_scaled, 2, var, na.rm = TRUE)
+tmp <- sum(tmp)
+
+tmp1 = kmeans(data_11_years_scaled, centers = 1)
+
+wssplot(data_11_years_scaled)
+```
+```{r}
+fit.km <- kmeans(data_11_years_tmp, centers = 5, iter.max = 100)
+
+fit.km$size
+
+fit.km$centers
+```
+
+```{r}
+aggregate(data_11_years_tmp, by=list(cluster=fit.km$cluster), mean)
+
+table(data_11_years_tmp$inddea, fit.km$cluster)
+```
+
+```{r}
+library(NbClust)
+library(cluster)
+library(rattle)
+clusplot(pam(as.matrix(fit.km$cluster), k=5))
+
+set.seed(1234)
+nc <- NbClust(data_11_years_scaled, min.nc=2, max.nc=15, method="kmeans")
+
+table(nc$Best.n[1, ])
+
+barplot(table(nc$Best.n[1,]),
+        xlab="Numer of Clusters", ylab="Number of Criteria",
+        main="Number of Clusters Chosen by 26 Criteria")
+
+```
+
