@@ -566,7 +566,7 @@ ggsurvplot(age_fit, pval = TRUE, main = "Probability of people not committing Su
 esr_data  = na.omit(select(suicides_11, follow, event, esr) %>% filter(!is.na(esr)))
 employment_fit <- survfit(survObject ~ esr, data = esr_data)
 
-ggsurvplot(employment_fit, pval = TRUE)
+ggsurvplot(employment_fit, pval = TRUE, main = "Employment effect")
 
 ```
 ##### Plotting Survival w.r.t being a Gender
@@ -596,5 +596,9 @@ veteran_fit <- survfit(survObject ~ vt, data = vet_data)
 ggsurvplot(veteran_fit, pval = TRUE, break.time.by = 500)
 
 table(suicides_11$vt)
+```
+
+```{r}
+
 ```
 
