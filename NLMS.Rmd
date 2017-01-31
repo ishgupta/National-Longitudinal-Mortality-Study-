@@ -11,6 +11,8 @@ library(dplyr)
 library(Amelia)
 library(ggplot2)
 library(caret)
+library(survival)
+library(survminer)
 ```
 
 ### 2. Consolidate Column Classes
@@ -539,9 +541,6 @@ for(ageItem in missingData$ageGroup){
 
 #### create Survival Object
 ```{r}
-library(survival)
-library(survminer)
-
 event <- rep(1, nrow(suicides_11))
 suicides_11 <- cbind(suicides_11, event)
 
@@ -595,10 +594,14 @@ veteran_fit <- survfit(survObject ~ vt, data = vet_data)
 
 ggsurvplot(veteran_fit, pval = TRUE, break.time.by = 500)
 
+vet_diff <- survdiff(survObject ~ vt, data= vet_data)
+
 table(suicides_11$vt)
 ```
 
 ```{r}
+vet_diff
 
+library(help=survival)
 ```
 
