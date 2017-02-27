@@ -1,0 +1,914 @@
+---
+title: "Survival Analysis with the data from National Longitudinal Mortality Survey"
+output:
+  html_document:
+    code_folding: hide
+    echo: no
+    fig_height: 8
+    fig_width: 10
+    message: no
+  pdf_document: default
+---
+
+### Background
+National Longitudinal Mortality Survey was a follow up done with a set of population (living in United States) for 11 years time to observe and record their Health and Lifestyle vitals to study the effects of demographic and socio-economic characteristics on differential in Mortality rates.
+
+```{r, include = FALSE}
+### Lets do some preparations to get the Ground running.
+
+### 1. Load required Libraries
+
+
+library(readr)
+library(data.table)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(survival)
+library(survminer)
+library(plotly)
+```
+
+```{r, include = FALSE}
+### 2. Consolidate Column Classes
+
+columnClasses = c('character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character','character')
+
+```
+
+```{r, include = FALSE}
+### 3. Load data for 11 years Survey, 6 years, and tobacco users
+
+if(file.exists("./data/data_11_years.RData")){
+  load("./data/data_11_years.RData")
+}
+
+if(!exists("data_11_years")){
+  #data_11_years <- read.csv("data/11.csv", colClasses = columnClasses, na.strings = c("NA", ""))
+  data_11_years <- read.csv("./data/11.csv", na.strings = c("NA", ""))
+  
+  data_11_years$record <- as.integer(data_11_years$record)
+  data_11_years$age <- as.integer(data_11_years$age)
+  data_11_years$wt <- as.integer(data_11_years$wt)
+  data_11_years$hhid <- as.integer(data_11_years$hhid)
+  data_11_years$hhnum <- as.integer(data_11_years$hhnum)
+  data_11_years$agesmk <- as.integer(data_11_years$agesmk)
+  
+  save(data_11_years, file="./data/data_11_years.RData")
+}
+
+```
+
+```{r, include = FALSE}
+if(file.exists("./data/data_6a.RData")){
+  load("./data/data_6a.RData")
+}
+
+if(!exists("data_6a")){
+  #data_6a <- read.csv("./data/6a.csv", colClasses = columnClasses, na.strings = c("NA", ""))
+  data_6a <- read.csv("./data/6a.csv", na.strings = c("NA", ""))
+  data_6a$record <- as.integer(data_6a$record)
+  data_6a$age <- as.integer(data_6a$age)
+  data_6a$wt <- as.integer(data_6a$wt)
+  data_6a$hhid <- as.integer(data_6a$hhid)
+  data_6a$hhnum <- as.integer(data_6a$hhnum)
+  data_6a$agesmk <- as.integer(data_6a$agesmk)
+  
+  save(data_6a, file="./data/data_6a.RData")
+}
+
+
+if(file.exists("./data/data_6b.RData")){
+  load("./data/data_6b.RData")
+}
+
+if(!exists("data_6b")){
+  #data_6b <- read.csv("./data/6b.csv", colClasses = columnClasses, na.strings = c("NA", ""))
+  data_6b <- read.csv("./data/6b.csv", na.strings = c("NA", ""))
+  data_6b$record <- as.integer(data_6b$record)
+  data_6b$age <- as.integer(data_6b$age)
+  data_6b$wt <- as.integer(data_6b$wt)
+  data_6b$hhid <- as.integer(data_6b$hhid)
+  data_6b$hhnum <- as.integer(data_6b$hhnum)
+  data_6b$agesmk <- as.integer(data_6b$agesmk)
+  
+  save(data_6b, file="./data/data_6b.RData")
+}
+
+
+if(file.exists("./data/data_6c.RData")){
+  load("./data/data_6c.RData")
+}
+
+if(!exists("data_6c")){
+  #data_6c <- read.csv("./data/6c.csv", colClasses = columnClasses, na.strings = c("NA", ""))
+  data_6c <- read.csv("./data/6c.csv", na.strings = c("NA", ""))
+  data_6c$record <- as.integer(data_6c$record)
+  data_6c$age <- as.integer(data_6c$age)
+  data_6c$wt <- as.integer(data_6c$wt)
+  data_6c$hhid <- as.integer(data_6c$hhid)
+  data_6c$hhnum <- as.integer(data_6c$hhnum)
+  data_6c$agesmk <- as.integer(data_6c$agesmk)
+  
+  save(data_6c, file="./data/data_6c.RData")
+}
+
+```
+
+```{r, include = FALSE}
+if(file.exists("./data/tobaccoUsers.RData")){
+  load("./data/tobaccoUsers.RData")
+}
+
+if(!exists("tobaccoUsers")){
+  tobaccoUsers <- read.csv("./data/tu.csv", colClasses = columnClasses)
+  
+  tobaccoUsers$record <- as.integer(tobaccoUsers$record)
+  tobaccoUsers$age <- as.integer(tobaccoUsers$age)
+  tobaccoUsers$wt <- as.integer(tobaccoUsers$wt)
+  tobaccoUsers$hhid <- as.integer(tobaccoUsers$hhid)
+  tobaccoUsers$hhnum <- as.integer(tobaccoUsers$hhnum)
+  tobaccoUsers$agesmk <- as.integer(tobaccoUsers$agesmk)
+  
+  save(tobaccoUsers, file="./data/tobaccoUsers.RData")
+}
+
+```
+
+```{r, include = FALSE}
+### 4. Filter data for Suicides
+
+suicides_11 <- data_11_years[data_11_years$cause113 %in% c(105, 106), ]
+
+suicides_6 <- data_6a[data_6a$cause113 %in% c(105, 106), ]
+suicides_6 <- rbind(suicides_6, data_6b[data_6b$cause113 %in% c(105, 106), ])
+suicides_6 <- rbind(suicides_6, data_6c[data_6c$cause113 %in% c(105, 106), ])
+
+suicides_tu <- tobaccoUsers[tobaccoUsers$cause113 %in% c(105, 106), ]
+```
+
+### Let's see an overall picture for the Loss of lives recorded in this Survey of 11 years, and compare it to the amount of Suicides. In our Study, we'll be focussing on finding the Driving factors for people committing Suicide.
+```{r, fig.width=7, fig.height=5, echo= FALSE, message = FALSE}
+tmp <- data_11_years %>% filter(inddea == 1) %>% group_by(cause113) %>% summarise(count = n()) %>% rename(freq = count)
+
+overview <- ggplot(tmp, aes(x = cause113, y = freq)) + geom_bar(stat = "identity", aes(fill = cause113 %in% c(105, 106))) + scale_fill_manual(values = c('black','red'), labels = c("Other reasons", "Suicide"), guide = FALSE) + ggtitle("Recorded loss of Lives") + labs(x = "Cause of Death", y = "Number of Lives lost") + theme(legend.title = element_blank())
+
+ggplotly(overview)
+
+```
+
+
+```{r, include = FALSE}
+### Data Wrangling to make it suitable for further Study.
+
+### 5. Remove superset Data
+rm(list = c("data_11_years", "data_6a", "data_6b", "data_6c", "tobaccoUsers"))
+```
+
+```{r, include = FALSE}
+### 6. Clean unwanted predictors in Suicide Data
+# ID
+suicides_11 <- suicides_11[, -1]
+
+# indicator for Dead or Alive? since the records are for all suicides, this becomes useless
+suicides_11 <- suicides_11 %>% select(-inddea)
+
+if(sum(!is.na(suicides_11$smok100))==0){
+  suicides_11 <- suicides_11 %>% select(-smok100)
+}
+
+if(sum(!is.na(suicides_11$agesmk))==0){
+  suicides_11 <- suicides_11 %>% select(-agesmk)
+}
+
+if(sum(!is.na(suicides_11$smokstat))==0){
+  suicides_11 <- suicides_11 %>% select(-smokstat)
+}
+
+if(sum(!is.na(suicides_11$smokhome))==0){
+  suicides_11 <- suicides_11 %>% select(-smokhome)
+}
+
+if(sum(!is.na(suicides_11$curruse))==0){
+  suicides_11 <- suicides_11 %>% select(-curruse)
+}
+
+if(sum(!is.na(suicides_11$everuse))==0){
+  suicides_11 <- suicides_11 %>% select(-everuse)
+}
+
+```
+
+```{r, include = FALSE}
+### 7. Create helpful Consolidated variables
+#### Create age Groups
+suicides_11$ageGroup <- ifelse(between(suicides_11$age, 0, 11), "Under 12 Years", 
+      ifelse(between(suicides_11$age, 12, 17), "12 - 17 years old",
+          ifelse(between(suicides_11$age, 18, 24), "18 - 24 years old", 
+                 ifelse(between(suicides_11$age, 25, 34), "25 - 34 years old", 
+                        ifelse(between(suicides_11$age, 35, 44), "35 - 44 years old", 
+                               ifelse(between(suicides_11$age, 45, 54), "45 - 54 years old", 
+                                      ifelse(between(suicides_11$age, 55, 64), "55 - 64 years old", 
+                                             ifelse(between(suicides_11$age, 65, 74), "65 - 74 years old", 
+                                                    "75 years or older"))))))))
+
+suicides_11$ageGroup <- factor(suicides_11$ageGroup)
+
+table(suicides_11$ageGroup)
+
+```
+
+```{r, include = FALSE}
+#### Create Income Groups
+suicides_11$incomeGroup <- "NA"
+suicides_11$incomeGroup <- ifelse(suicides_11$adjinc %in% c(1:7), "Less Than 25k", 
+       ifelse(suicides_11$adjinc %in% c(8:11), "Between 25k and 50k",
+              ifelse(suicides_11$adjinc %in% c(12:13), "Between 50k and 75k",
+                     "More than 75k")))
+
+suicides_11$incomeGroup <- factor(suicides_11$incomeGroup, levels = c("NA", "Less Than 25k", "Between 25k and 50k", "More than 75k"))
+
+table(suicides_11$incomeGroup)
+```
+
+```{r, include = FALSE}
+#### Create Education groups
+suicides_11$educLevel <- "NA"
+suicides_11$educLevel <- ifelse(suicides_11$educ %in% c(1:4), "Upto E8",
+                                ifelse(suicides_11$educ %in% c(5:8), "H1 to H4",
+                                       ifelse(suicides_11$educ %in% c(9:14), "C1 to C6", "NA")))
+
+suicides_11$educLevel <- factor(suicides_11$educLevel, levels = c("NA", "Upto E8", "H1 to H4", "C1 to C6"))
+
+table(suicides_11$educLevel)
+
+```
+
+```{r, include = FALSE}
+#### Group Industry into manual Labor Industry and Professional
+suicides_11$isManualLaborIndustry <- FALSE
+
+suicides_11$isManualLaborIndustry <- ifelse(suicides_11$majind %in% c(1:4, 14), TRUE, FALSE)
+
+table(suicides_11$isManualLaborIndustry)
+
+```
+
+```{r, include = FALSE}
+#### factorize Relationship
+suicides_11$reltrf <- as.factor(suicides_11$reltrf)
+levels(suicides_11$reltrf) <- c("Ref person with other relatives in household", "Ref person with no other relatives in household", "Spouse of reference person", "Child of reference person", "Other relative of reference person", "Non-relative of reference person")
+
+```
+
+```{r, include = FALSE}
+#### factorize TENURE
+suicides_11$tenure <- as.factor(suicides_11$tenure)
+levels(suicides_11$tenure) <- c("Owned", "Rented", "Rented for Non- Cash")
+
+```
+
+```{r, include = FALSE}
+#### factorize health Condition
+suicides_11$health <- as.factor(suicides_11$health)
+levels(suicides_11$health) <- c("Excellent", "Very Good", "Good", "Fair", "Poor")
+table(suicides_11$health)
+
+```
+
+```{r, include = FALSE}
+#### Factorize Citizenship
+suicides_11$citizen <- factor(suicides_11$citizen)
+levels(suicides_11$citizen) = c("Born in US", "Born in PR", "Born Abroad", "Foreign born, Naturally American", "Foreigner")
+```
+
+```{r, include = FALSE}
+#### Factorize Hispanic relationship
+suicides_11$hisp <- factor(suicides_11$hisp)
+levels(suicides_11$hisp) = c("Mexican", "Other Hispanics", "Non- Hispanics")
+
+```
+
+```{r, include = FALSE}
+#### Factorize Urban data
+suicides_11$urban <- factor(suicides_11$urban)
+levels(suicides_11$urban) = c("Urban", "Rural")
+```
+
+```{r, include = FALSE}
+#### Encode Gender 
+suicides_11$sex <- factor(suicides_11$sex)
+levels(suicides_11$sex) <- c("Male", "Female")
+
+```
+
+```{r, include = FALSE}
+#### Factorize Employment Status
+suicides_11$esr <- as.factor(suicides_11$esr)
+levels(suicides_11$esr) <- c("Employed", "Absent from Work", "Unemployed- looking for Work", "Disabled", "Unemployed- Retired or Student")
+
+```
+
+
+
+```{r, include = FALSE}
+### 8. Impute missing values
+#### Impute Race w.r.t birth place
+#unique(suicides_11$race)
+
+#table(suicides_11$pob[is.na(suicides_11$race)])
+
+tmpdata= suicides_11 %>% group_by(pob) %>% summarise(race = median(as.integer(race), na.rm = TRUE))
+  
+pob_race_1 <- tmpdata  %>% filter(race==1) %>% select(pob) %>% unlist
+pob_race_2 <- tmpdata %>% filter(race==2) %>% select(pob) %>% unlist
+pob_race_4 <- tmpdata %>% filter(race==4) %>% select(pob) %>% unlist
+
+suicides_11$race <- ifelse(is.na(suicides_11$race), 
+       ifelse(suicides_11$pob %in% pob_race_1, "1", 
+              ifelse(suicides_11$pob %in% pob_race_2, "2",
+                     ifelse(suicides_11$pob %in% pob_race_4, "4", suicides_11$race))), suicides_11$race)
+
+#### factorize Race
+suicides_11$race <- as.integer(suicides_11$race)
+suicides_11$race <- factor(suicides_11$race)
+levels(suicides_11$race) <- c("White", "Black", "American Indian or Alaskan", "Asian or Pacific Islander", "Other Non- White")
+
+rm(list = c("pob_race_1", "pob_race_2", "pob_race_4", "tmpdata"))
+
+matplot(table(suicides_11$race), type = "h", lwd =10, xlab = "Race", ylab = "Count")
+legend('right', inset = 0.05, legend = levels(suicides_11$race))
+
+```
+
+
+```{r, include = FALSE}
+#### Impute Citizenship w.r.t Race
+#table(suicides_11$citizen)
+
+# Citizenship for people Race wise:
+#table(suicides_11$race[is.na(suicides_11$citizen)])
+
+#Citizenship for most of the people == 1(Native, born in the U.S.)
+#median(as.integer(suicides_11$citizen), na.rm = T)
+
+suicides_11 %>% group_by(race) %>% summarise(citizen = round(median(as.integer(citizen), na.rm = TRUE)))
+
+suicides_11$citizen <- ifelse(is.na(suicides_11$citizen), ifelse(suicides_11$race %in% c(1:4), 1, 3), suicides_11$citizen)
+
+
+suicides_11$citizen <- as.factor(suicides_11$citizen)
+levels(suicides_11$citizen) <- c("Born in US", "Born in PR", "Born Abroad", "Foreign born, Naturally American", "Foreigner")
+
+matplot(table(suicides_11$citizen), type = "h", lwd = 10)
+```
+
+
+```{r, echo = FALSE, message = FALSE}
+#### Impute marital status w.r.t Age   -- Revisit for transforming it with Age and Gender both
+#suicides_11 %>% group_by(ageGroup, sex) %>% summarise(ms = round(median(as.integer(ms), na.rm = T)))
+
+# Subjects Under 12 Years of Age are definite to be Never Married.
+# Subjects in Age group - 12-17, 18-24 years, have majority of 'Never Married' people (ms = 5)
+# Male Subjects in Age group - 25-34 years, have majority of Divorced people (ms =  3)
+# Female Subjects in Age group - 25-34 years, have majority of 'Married' people (ms =  1)
+# Subjects in Age group - 35-64 have majority of Married people (ms =  1)
+# Male Subjects in Age Group- >75 years have majority of Married people (ms = 1)
+# Female Subjects in Age Group- >75 years have majority of 'Divorced' people (ms = 2)
+
+#table(suicides_11$ageGroup[is.na(suicides_11$ms)])
+
+suicides_11$ms <- ifelse(is.na(suicides_11$ms), 
+                         ifelse(suicides_11$ageGroup == "Under 12 Years", 5,
+                                ifelse(suicides_11$ageGroup == "12 - 17 years old", 5,
+                                       ifelse(suicides_11$ageGroup == "18 - 24 years old", 5, 
+                                              ifelse(suicides_11$ageGroup == "25 - 34 years old" & suicides_11$sex == "Male", 3,
+                                                     ifelse(suicides_11$ageGroup == "25 - 34 years old" & suicides_11$sex == "Female", 1,
+                                                            ifelse(suicides_11$ageGroup == "35 - 44 years old", 1, 
+                                                                   ifelse(suicides_11$ageGroup == "45 - 54 years old", 1,
+                                                                          suicides_11$ms))))))), suicides_11$ms)
+
+#### Factorize Marital Status.
+suicides_11$ms <- factor(suicides_11$ms)
+levels(suicides_11$ms) <- c("Married", "Widowed", "Divorced", "Separated", "Never Married")
+
+```
+
+```{r, include = FALSE}
+#### Impute hispanic w.r.t place of Birth
+
+#table(suicides_11$pob[is.na(suicides_11$hisp)])
+
+tmpdata= suicides_11 %>% group_by(pob) %>% summarise(hisp = median(as.integer(hisp), na.rm = TRUE))
+  
+pob_hisp_1 <- tmpdata  %>% filter(hisp==1) %>% select(pob) %>% unlist
+pob_hisp_2 <- tmpdata %>% filter(hisp==2) %>% select(pob) %>% unlist
+pob_hisp_3 <- tmpdata %>% filter(hisp==3) %>% select(pob) %>% unlist
+
+lvl_hisp <- levels(suicides_11$hisp)
+
+suicides_11$hisp <- ifelse(is.na(suicides_11$hisp), 
+       ifelse(suicides_11$pob %in% pob_hisp_1, 1, 
+              ifelse(suicides_11$pob %in% pob_hisp_2, 2,
+                     ifelse(suicides_11$pob %in% pob_hisp_3, 3, suicides_11$hisp))), suicides_11$hisp)
+
+suicides_11$hisp <- as.factor(suicides_11$hisp)
+levels(suicides_11$hisp) <- lvl_hisp
+
+rm(list = c("pob_hisp_1", "pob_hisp_2", "pob_hisp_3", "tmpdata", "lvl_hisp"))
+
+```
+
+
+```{r, include = FALSE}
+#### Impute urban w.r.t State of Residence
+#table(suicides_11$urban)
+
+tmpdata = suicides_11 %>% select(urban, stater) %>% group_by(stater) %>% summarise(urban = round(median(as.integer(urban), na.rm = T)))
+
+stater_urban_1 <- tmpdata %>% filter(urban==1) %>% select(stater) %>% unlist
+stater_urban_2 <- tmpdata %>% filter(urban==2) %>% select(stater) %>% unlist
+
+suicides_11$urban <- ifelse(is.na(suicides_11$urban),
+       ifelse(suicides_11$stater %in% stater_urban_1, 1, 2), suicides_11$urban)
+
+suicides_11$urban <- factor(suicides_11$urban)
+levels(suicides_11$urban) <- c("Urban", "Rural")
+
+```
+
+
+
+```{r, include = FALSE}
+#### Impute Education w.r.t urban
+#table(suicides_11$urban[is.na(suicides_11$educ)])
+#table(suicides_11$educ)
+
+tmp_data <- suicides_11 %>% select(urban, educ, citizen) %>% group_by(urban, citizen) %>% summarise(educ = median(educ, na.rm = T))
+
+suicides_11$educ <- ifelse(is.na(suicides_11$educ),
+       ifelse((suicides_11$urban == "Urban" & suicides_11$citizen == "Born in US"), 8, 
+              ifelse((suicides_11$urban == "Urban" & suicides_11$citizen == "Born in PR"), 3, 
+                     ifelse((suicides_11$urban == "Urban" & suicides_11$citizen == "Born Abroad"), 12, 
+                            ifelse((suicides_11$urban == "Urban" & suicides_11$citizen == "Foreign born, Naturally American"), 11,
+                                   8)))), suicides_11$educ)
+
+rm(tmp_data)
+
+```
+
+
+```{r, include = FALSE}
+#### Impute adjusted inflation income w.r.t Education
+#table(suicides_11$educ[is.na(suicides_11$adjinc)])
+
+tmpdata= suicides_11 %>% group_by(educ) %>% summarise(adjinc = round(median(as.integer(adjinc), na.rm = TRUE)))
+  
+educ_adjinc_4 <- tmpdata  %>% filter(adjinc==4) %>% select(educ) %>% unlist
+educ_adjinc_6 <- tmpdata  %>% filter(adjinc==6) %>% select(educ) %>% unlist
+educ_adjinc_7 <- tmpdata  %>% filter(adjinc==7) %>% select(educ) %>% unlist
+educ_adjinc_8 <- tmpdata  %>% filter(adjinc==8) %>% select(educ) %>% unlist
+educ_adjinc_9 <- tmpdata  %>% filter(adjinc==9) %>% select(educ) %>% unlist
+educ_adjinc_10 <- tmpdata  %>% filter(adjinc==10) %>% select(educ) %>% unlist
+educ_adjinc_11 <- tmpdata  %>% filter(adjinc==11) %>% select(educ) %>% unlist
+educ_adjinc_12 <- tmpdata  %>% filter(adjinc==12) %>% select(educ) %>% unlist
+
+suicides_11$adjinc <- ifelse(is.na(suicides_11$adjinc), 
+       ifelse(suicides_11$educ %in% educ_adjinc_4, 4, 
+              ifelse(suicides_11$educ %in% educ_adjinc_6, 6,
+                     ifelse(suicides_11$educ %in% educ_adjinc_7, 7,
+                            ifelse(suicides_11$educ %in% educ_adjinc_8, 8, 
+                                   ifelse(suicides_11$educ %in% educ_adjinc_9, 9, 
+                                          ifelse(suicides_11$educ %in% educ_adjinc_10, 10, 
+                                                 ifelse(suicides_11$educ %in% educ_adjinc_11, 11, 
+                                                        ifelse(suicides_11$educ %in% educ_adjinc_12, 12, 
+                                                               suicides_11$adjinc)))))))), suicides_11$adjinc)
+
+rm(list = c("educ_adjinc_4", "educ_adjinc_6", "educ_adjinc_7", "educ_adjinc_8", "educ_adjinc_9", "educ_adjinc_10", "educ_adjinc_11", "educ_adjinc_12"))
+
+suicides_11$adjinc <- factor(suicides_11$adjinc)
+#levels(suicides_11$adjinc) <- c()
+
+```
+
+```{r, message = FALSE, fig.width= 6, fig.height=4, echo = FALSE}
+#### Impute veteran w.r.t Age
+#unique(suicides_11$vt)
+#table(suicides_11$age[suicides_11$vt==1])
+
+# There are none of the Veterans below the age of 19, so imputing the values of such records as a Non- Veteran.
+suicides_11$vt[suicides_11$age <19] <- 0
+
+
+## Work out other missing values for Veteran.
+
+#suicides_11 %>% select(vt, occ, majocc) %>% group_by(vt) %>% filter(!is.na(occ) & !is.na(majocc) & vt==1)
+
+# after trying to figure out data available for people who are a Veteran with different attributes, Citizenship (Born Abroad) looks to be the only attribute important.
+#All the people with missing Veteran status are mostly the ones born in US.
+#table(suicides_11$citizen[!is.na(suicides_11$vt) & suicides_11$vt==1])
+
+#table(suicides_11$citizen[!is.na(suicides_11$vt)])
+
+# lets validate other attributes of being Veteran, when person is not a US citizen by birth.
+#suicides_11 %>% filter(vt==1 & citizen == "Born in US") 
+
+#table(suicides_11$hisp[is.na(suicides_11$vt)])  # Non- hispanics= 158
+#table(suicides_11$sex[is.na(suicides_11$vt)])  # Male = 138
+#table(suicides_11$race[is.na(suicides_11$vt)])  # White = 154
+#table(suicides_11$histatus[is.na(suicides_11$vt)])  # had Inusrance = 81
+#table(suicides_11$hospd[is.na(suicides_11$vt)])  # Did not die in Hospital = 106
+
+#sort(unique(as.integer(unlist(suicides_11$age[suicides_11$vt==1]))), decreasing = FALSE)
+
+#suicides_11 %>% filter(is.na(vt) & hisp == "Non- Hispanics" & race == "White" & sex == 1 & histatus == 1 & hospd == 5) 
+
+# Set the missing values of matching criteria here to being a VETERAN.
+suicides_11$vt[is.na(suicides_11$vt) & suicides_11$hisp == "Non- Hispanics" & suicides_11$race == "White" & suicides_11$sex == 1 & suicides_11$histatus == 1 & suicides_11$hospd == 5] <- 1
+
+
+#the remaining 3 records are being imputed by the median values.
+#suicides_11[is.na(suicides_11$vt), ]
+
+#suicides_11 %>% filter(ms == "Never Married" & hisp == "Non- Hispanics" & adjinc==11) %>% group_by(citizen) %>% select(age, ms, educ, vt) %>% summarise(vt = median(vt, na.rm = T))
+                                                                                                               
+suicides_11$vt[is.na(suicides_11$vt)] <- 0
+
+suicides_11$vt <- as.factor(as.integer(suicides_11$vt))
+levels(suicides_11$vt) <- c("Not a Veteran", "Veteran")
+
+#majority of Veterans are Non- Hispanics and White, Male, did not die in Hospital, and had Insurance- so lets validate the same data for missing values of Veteran.
+
+ggplot(suicides_11, aes(x = hisp, fill= vt)) + geom_bar() + labs(title = "Suicides w.r.t Hispanics region compared to being a Veteran")
+ggplot(suicides_11, aes(x = sex, fill = vt)) + geom_bar() + labs(title = "Suicides w.r.t Gender compared to being a Veteran")
+ggplot(suicides_11, aes(x = race, fill = vt)) + geom_bar() + theme(axis.text.x = element_text(angle = 45)) + labs(title = "Suicides w.r.t Race compared to being a Veteran")
+
+```
+
+```{r, include = FALSE}
+#### Impute occupation w.r.t Veteran
+
+#Set occupation as 0 for Children
+#suicides_11$occ[suicides_11$ageGroup == "Under 12 Years"] <- 0000
+
+#suicides_11 %>% filter(is.na(occ)) %>% select(-c(age, adjinc, wt, hhid, hhnum, reltrf, ind, majind, smsast, cause113, follow, dayod, hosp, hospd, ssnyn, histatus, hitype, povpct)) %>% group_by(ageGroup, race, sex, ms, hisp, urban, citizen)
+
+#suicides_11 %>% filter(!is.na(occ) & occ!= 0) %>% select(-c(age, adjinc, wt, hhid, hhnum, reltrf, ind, majind, smsast, cause113, follow, dayod, hosp, hospd, ssnyn, histatus, hitype, povpct)) %>% group_by(ageGroup, ms) %>% summarise(occ = median(occ))
+
+```
+
+
+```{r, include = FALSE}
+##### Impute ESR
+
+#unique(suicides_11$esr)
+#table(suicides_11$educ[suicides_11$ageGroup %in% c("Under 12 Years", "12 - 17 years old") & is.na(suicides_11$esr)])
+
+#First Impute
+# Since, Childrens below age 12 are not expected to be working, neither they are, as per the Data for Non- missing values.
+#ESR- "Employed", "Absent from Work", "Unemployed- looking for Work", "Disabled", "Unemployed- Retired or Student"
+suicides_11$esr[suicides_11$ageGroup == "Under 12 Years" & is.na(suicides_11$esr)] <- "Unemployed- Retired or Student"
+
+#Validate data for the age group where values are not missing.
+#table(suicides_11$educ[suicides_11$ageGroup == "12 - 17 years old" & !is.na(suicides_11$esr)])
+
+#table(suicides_11$educ[is.na(suicides_11$esr)])
+
+# Minors who have Completed H4 (8), Completed C4(12) have the Employment status missing. Lets check the usual employments for such Subjects.
+#table(suicides_11$esr[suicides_11$ageGroup == "12 - 17 years old" & suicides_11$educ %in% c(8, 12)])
+
+#median(as.integer(suicides_11$esr[suicides_11$ageGroup == "12 - 17 years old" & suicides_11$educ == 8]), na.rm = T)
+#median(as.integer(suicides_11$esr[suicides_11$ageGroup == "12 - 17 years old" & suicides_11$educ == 12]), na.rm = T)
+
+# Median values for such Subjects is found to be 5- "Not in the labor force", which seems appropriate too... Since, Children working at this Age is not usual. Let's impute it accordingly.
+# Second Impute
+suicides_11$esr[suicides_11$ageGroup == "12 - 17 years old" & is.na(suicides_11$esr)] <- "Unemployed- Retired or Student"
+
+
+#table(suicides_11$educ[suicides_11$ageGroup == "18 - 24 years old" & is.na(suicides_11$esr)])
+
+#median(as.integer(suicides_11$esr[suicides_11$ageGroup == "18 - 24 years old" & suicides_11$educ %in% c(8, 12)]), na.rm = TRUE)
+
+#Third Impute
+suicides_11$esr[suicides_11$ageGroup == "18 - 24 years old" & suicides_11$educ %in% c(8, 12) & is.na(suicides_11$esr)] <- "Employed"
+
+#table(suicides_11$educ[suicides_11$ageGroup == "25 - 34 years old" & is.na(suicides_11$esr)])
+
+#median(as.integer(suicides_11$esr[suicides_11$ageGroup == "25 - 34 years old" & suicides_11$educ %in% c(8)]), na.rm = TRUE)
+
+#Fourth Impute
+suicides_11$esr[suicides_11$ageGroup == "25 - 34 years old" & suicides_11$educ %in% c(8) & is.na(suicides_11$esr)] <- "Employed"
+
+
+#table(suicides_11$educ[suicides_11$ageGroup %in% c("35 - 44 years old", "45 - 54 years old") & is.na(suicides_11$esr)])
+
+#median(as.integer(suicides_11$esr[suicides_11$ageGroup %in% c("35 - 44 years old", "45 - 54 years old") & suicides_11$educ %in% c(12)]), na.rm = TRUE)
+
+#Fifth Impute
+suicides_11$esr[suicides_11$ageGroup %in% c("35 - 44 years old", "45 - 54 years old") & suicides_11$educ %in% c(12) & is.na(suicides_11$esr)] <- "Employed"
+
+```
+
+### An overview of people committing Suicides.
+```{r, message = FALSE, echo = FALSE, fig.height = 12}
+tmp_graph_1 <- ggplot(suicides_11, aes(x = race, y = age, col = ms, shape = sex)) + labs(x = "Race", y = "Age") + geom_jitter(alpha = 0.3) + theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45))
+
+ggplotly(tmp_graph_1)
+```
+
+
+### Males are found to be in majority for commiting Suicides, with White,  Married, and Never Married topping the census. We'll study the individual contribution of these factors towards deducing the Survivability of any Subject.
+
+### People educated till High School level 4 and having Salary less than 25k are the majority among Subjects.
+
+```{r, message=FALSE, echo=FALSE}
+tmp_graph_2 <- ggplot(suicides_11, aes(x = incomeGroup, y = educLevel, col = isManualLaborIndustry, shape = urban)) + geom_jitter() + labs(title = "Suicides w.r.t Education Level, Income, Subjects residing in Urban Areas, and Working in a Labor industry") + xlab("Income Group") + ylab("Education Level") + theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45))
+
+ggplotly(tmp_graph_2)
+```
+
+
+### Survival Analysis on Suicides.
+```{r, include = FALSE}
+#### create Survival Object
+event <- rep(1, nrow(suicides_11))
+suicides_11 <- cbind(suicides_11, event)
+
+survObject <- Surv(suicides_11$follow, suicides_11$event)
+
+```
+
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t Age Group
+age_fit <- survfit(survObject ~ ageGroup, data = na.omit(select(suicides_11, ageGroup, follow, event)))
+
+ggsurvplot(age_fit, pval = TRUE, main = "Survival w.r.t Age", break.time.by = 500,
+           risk.table = TRUE, risk.table.height = 3, log.rank.weights = "survdiff",
+           surv.plot.height = 3, surv.scale = "percent")
+
+#plot(age_fit, col = c(1 : length(unique(suicides_11$ageGroup))), lty = c(1 : length(unique(suicides_11$ageGroup))), lwd=3)
+#legend(500, .5, unique(suicides_11$ageGroup), lty = c(1: length(unique(suicides_11$ageGroup))), col = c(1 : length(unique(suicides_11$ageGroup))))
+
+```
+
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t. Race
+race_data = na.omit(select(suicides_11, follow, event, race) %>%  filter(!is.na(race)))
+race_fit <- survfit(survObject ~ race, data = race_data)
+
+ggsurvplot(race_fit, pval = TRUE, main = "Survival w.r.t Race",
+           risk.table = TRUE, risk.table.height = 2,
+           surv.plot.height = 3,
+           log.rank.weights = "survdiff")
+
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t Gender
+gender_data  = na.omit(select(suicides_11, follow, event, sex) %>% filter(!is.na(sex)))
+gender_fit <- survfit(survObject ~ sex, data = gender_data)
+
+ggsurvplot(gender_fit, pval = TRUE, break.time.by = 500, main = "Survival w.r.t Gender",
+           surv.plot.height = 2.50,
+           risk.table = TRUE, risk.table.height = 1,
+           log.rank.weights = "survdiff")
+
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t Marital Status
+ms_data  = na.omit(select(suicides_11, follow, event, ms) %>% filter(!is.na(ms)))
+ms_fit <- survfit(Surv(ms_data$follow, ms_data$event) ~ ms, data = ms_data)
+
+ggsurvplot(ms_fit, pval = TRUE, break.time.by = 1000,
+           surv.plot.height = 3,
+           risk.table = TRUE, risk.table.height = 3,
+           log.rank.weights = "survdiff",
+           main = "Survival w.r.t Marital Status"
+           )
+
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t. Inflation Adjusted Income.
+income_data <- na.omit(select(suicides_11, follow, event, incomeGroup))
+income_fit <- survfit(Surv(income_data$follow, income_data$event) ~ incomeGroup, data = income_data)
+
+ggsurvplot(income_fit, pval = TRUE, main = "Survival w.r.t Income",
+           risk.table = TRUE, risk.table.height = 2,
+           surv.plot.height = 3,
+           log.rank.weights = "survdiff")
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t Education
+educ_data <- na.omit(select(suicides_11, follow, event, educLevel))
+education_fit <- survfit(survObject ~ educLevel, data = educ_data)
+
+ggsurvplot(education_fit, pval = TRUE, main = "Survival w.r.t Highest Education Completed",
+           risk.table = TRUE, risk.table.height = 2,
+           surv.plot.height = 3,
+           log.rank.weights = "survdiff")
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t Relationship of the Subject to reference person within the household.
+rel_data <- select(suicides_11, follow, event, reltrf)
+rel_fit <- survfit(survObject ~ reltrf, data = rel_data)
+
+ggsurvplot(rel_fit, pval = TRUE, main = "Survival w.r.t Relationship of Subject with other people in Household",
+           risk.table = TRUE, risk.table.height = 2,
+           surv.plot.height = 3,
+           log.rank.weights = "survdiff")
+
+
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t working or Not?
+#table(suicides_11$majind)
+
+labor_data <- select(suicides_11, follow, event, isManualLaborIndustry)
+labor_fit <- survfit(survObject ~ isManualLaborIndustry, data = labor_data)
+
+ggsurvplot(labor_fit, pval = TRUE, main = "Survival w.r.t Being involved in Manual Labor Industry",
+           risk.table = TRUE, risk.table.height = 2,
+           surv.plot.height = 3, 
+           log.rank.weights = "survdiff")
+
+
+```
+
+
+```{r, echo=FALSE, message = FALSE}
+#### Plotting Survival w.r.t Employment
+esr_data  = select(suicides_11, follow, event, esr) %>% filter(!is.na(esr))
+employment_fit <- survfit(Surv(esr_data$follow, esr_data$event) ~ esr, data = esr_data)
+
+ggsurvplot(employment_fit, pval = TRUE, main = "Survival w.r.t Employment",
+           risk.table = TRUE, risk.table.height = 2,
+           surv.plot.height = 3,
+           log.rank.weights = "survdiff")
+
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t people being Hispanic.
+#table(suicides_11$hisp)
+
+hisp_data <- select(suicides_11, follow, event, hisp)
+hisp_fit <- survfit(survObject ~ hisp, data = hisp_data)
+
+ggsurvplot(hisp_fit, pval = TRUE, main = "Survival w.r.t Being Hispanic",
+           risk.table = TRUE, risk.table.height = 2,
+           surv.plot.height = 3,
+           log.rank.weights = "survdiff")
+```
+```{r, echo = FALSE, message = FALSE}
+#### Survival w.r.t Type of Health Insurance
+
+insurance_data <- select(suicides_11, follow, event, hitype) %>% filter(!is.na(hitype))
+
+insurance_data$insured <- FALSE
+insurance_data$insured <- ifelse(insurance_data$hitype == 0, FALSE, TRUE)
+
+insurance_fit <- survfit(Surv(insurance_data$follow, insurance_data$event) ~ insured, data = insurance_data)
+
+ggsurvplot(insurance_fit, pval = TRUE, main = "Survival w.r.t Type of Insurance",
+           surv.plot.height = 3, surv.scale = "percent",
+           risk.table = TRUE, risk.table.height = 2,
+           log.rank.weights = "survdiff")
+
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t living in a Urban or Rural area.
+urban_data <- select(suicides_11, follow, event, urban)
+urban_fit <- survfit(survObject ~ urban, data = urban_data)
+
+ggsurvplot(urban_fit, surv.plot.height = 3, surv.scale = "percent", 
+           main = "Survival w.r.t. Living in Rural or Urban area", 
+           risk.table = TRUE, risk.table.height = 2, 
+           log.rank.weights = "survdiff")
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Survival w.r.t type of Ownership of the Residence
+#table(suicides_11$tenure)
+#sum(is.na(suicides_11$tenure))
+
+#suicides_11 %>% filter(is.na(tenure)) %>% select(ageGroup, sex, ms, race, stater, citizen)
+# all the missing values of 'type of Ownership belongs to people born Abroad', out of which 90% are White.
+
+#suicides_11 %>% filter(ageGroup == "Under 12 Years" & race == "White" & citizen == "Born Abroad") %>% group_by(as.integer(citizen)) %>% summarise(tenure = count(as.character(tenure)))
+
+#1	Residence is owned by householder
+#2	Residence is rented by householder
+#3	Residence is rented for noncash rent by householder
+
+# people under the Age Group of 12 Years have the Houses owned by them.
+suicides_11[suicides_11$ageGroup== "Under 12 Years" & is.na(suicides_11$tenure), "tenure"] <- "Owned"
+
+#table(suicides_11$ms[!is.na(suicides_11$tenure)], suicides_11$tenure[!is.na(suicides_11$tenure)])
+
+# Married owns in 77.45% observations. (1075) relatively = 833/2120 = 39%
+# Widowed owns in 70% obervations. (102) relatively = 72/2120 = 3%
+# Divorced owns in 52% observations. (251) relatively = 131/2120 = 6%
+# Separated owns in 56% observations. (48) relatively = 27/2120 = 1%
+# Never Married owns in 63% observations. (644) relatively = 410/2120 = 19%
+
+tenure_data <- select(suicides_11, follow, event, tenure, ms)
+
+median(as.integer(tenure_data[tenure_data$ms == "Married" & tenure_data$race == "White" & tenure_data$citizen == "Born Abroad", "tenure"]), na.rm = TRUE)
+median(tenure_data[tenure_data$ms == "Divorced" & tenure_data$race == "White" & tenure_data$citizen == "Born Abroad", "tenure"], na.rm = TRUE)
+
+tenure_data <- select(suicides_11, follow, event, tenure)
+tenure_fit <- survfit(survObject ~ tenure, data = tenure_data)
+
+ggsurvplot(tenure_fit, surv.plot.height = 3, surv.scale = "percent", 
+           main = "Survival w.r.t. type of House Ownership", 
+           risk.table = TRUE, risk.table.height = 2, 
+           log.rank.weights = "survdiff")
+```
+
+
+```{r, echo=FALSE, message = FALSE}
+#### Plotting Survival w.r.t Citizenship
+citizen_data <- na.omit(select (suicides_11, follow, event, citizen) %>% filter(!is.na(citizen)))
+citizen_fit <- survfit(survObject ~ citizen, data = citizen_data)
+
+ggsurvplot(citizen_fit, pval = TRUE, log.rank.weights = "survdiff",
+           risk.table = TRUE, risk.table.height = 2,
+           surv.plot.height = 3, surv.scale = "percent",
+           main = "Survival w.r.t Citizenship")
+```
+
+```{r, echo = FALSE, message = FALSE}
+#### Survival w.r.t Health Status
+health_data <- select(suicides_11, event, follow, health)
+health_fit <- survfit(survObject ~ health, data = health_data)
+
+ggsurvplot(health_fit, surv.plot.height = 3, pval = TRUE, main = "Survival w.r.t. Health Status",
+           risk.table = TRUE, risk.table.height = 2,
+           log.rank.weights = "survdiff"
+           )
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Plotting Survival w.r.t being a Veteran
+vet_data  = na.omit(select(suicides_11, follow, event, vt) %>% filter(!is.na(vt)))
+veteran_fit <- survfit(survObject ~ vt, data = vet_data)
+
+ggsurvplot(veteran_fit, pval = TRUE, break.time.by = 500, log.rank.weights = "survdiff",
+           risk.table = TRUE, risk.table.height = 1,
+           surv.plot.height = 2.5, surv.scale = "percent",
+           main = "Survival w.r.t being a Veteran")
+
+#rm(list = c("age_fit", "race_data", "race_fit", "gender_data", "gender_fit", "ms_data", "ms_fit", "income_data", "income_fit", "educ_data", "education_fit", "rel_data", "rel_fit", "labor_data", "labor_fit", "esr_data", "employment_fit", "hisp_data", "hisp_fit", "insurance_data", "insurance_fit", "urban_data", "urban_fit", "citizen_data", "citizen_fit", "health_data", "health_fit"))
+```
+
+```{r, echo=FALSE, message = FALSE}
+#### Plotting Survival w.r.t marital Status, Gender, and Race
+tmp_data <- na.omit(select(suicides_11, ms, follow, event, sex, race))
+ms_gender_fit <- survfit(Surv(tmp_data$follow, tmp_data$event) ~ ms + sex + race, data = tmp_data)
+
+ggsurvplot(ms_gender_fit, pval = TRUE, main = "Survival w.r.t Marital Status and Gender", break.time.by = 500,
+           risk.table = TRUE, risk.table.height = 4, log.rank.weights = "survdiff",
+           surv.plot.height = 0, surv.scale = "percent")
+
+```
+
+
+```{r, echo = FALSE, message = FALSE, comment = "##"}
+#### Plotting the Survival w.r.t Highest Degree attained, and the Income.
+economic_data <- na.omit(select(suicides_11, event, follow, educLevel, incomeGroup))
+
+economic_fit <- survfit(Surv(economic_data$follow, economic_data$event) ~ educLevel + incomeGroup, data = economic_data)
+
+ggsurvplot(economic_fit, pval = TRUE, main = "Survival w.r.t Highest Degree Attained and Income", break.time.by = 500, surv.plot.height = 4, surv.scale = "percent")
+
+ggsurvplot(economic_fit, pval = TRUE, main = "Survival w.r.t Highest Degree Attained and Income", break.time.by = 500,
+           risk.table = TRUE, risk.table.height = 4, log.rank.weights = "survdiff",
+           surv.plot.height = 0, surv.scale = "percent")
+
+## for people with any Education level- most occurences are in Lowest income group. Along with, there are comparitive occurences in the next income group of 25k to 50k for people with Education level C1 to C6.
+
+```
+
+
+```{r, echo = FALSE, message = FALSE, comment = "##"}
+#### Plotting the Survival w.r.t Hispanic, and Citizen.
+demographics_data <- na.omit(select(suicides_11, event, follow, hisp, citizen))
+demographics_fit <- survfit(survObject ~ hisp + citizen, data = demographics_data)
+
+ggsurvplot(demographics_fit, pval = TRUE, main = "Survival w.r.t Highest Degree Attained and Income", break.time.by = 500, surv.plot.height = 4, surv.scale = "percent")
+
+ggsurvplot(demographics_fit, pval = TRUE, main = "Survival w.r.t Highest Degree Attained and Income", break.time.by = 500,
+           risk.table = TRUE, risk.table.height = 4, log.rank.weights = "survdiff",
+           surv.plot.height = 0, surv.scale = "percent")
+
+## Maximum occurences have been by the people born Abroad irrespective of Hispanic. For Non- Hispanics, most of the Subjects were born in US. 
+
+```
