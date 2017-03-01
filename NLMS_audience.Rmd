@@ -147,7 +147,7 @@ suicides_6 <- rbind(suicides_6, data_6c[data_6c$cause113 %in% c(105, 106), ])
 suicides_tu <- tobaccoUsers[tobaccoUsers$cause113 %in% c(105, 106), ]
 ```
 
-### Let's see an overall picture for the Loss of lives recorded in this Survey of 11 years, and compare it to the amount of Suicides. In our Study, we'll be focussing on finding the Driving factors for people committing Suicide.
+#### Let's see an overall picture for the Loss of lives recorded in this Survey of 11 years, and compare it to the amount of Suicides. In our Study, we'll be focussing on finding the Driving factors for people committing Suicide.
 ```{r, fig.width=7, fig.height=5, echo= FALSE, message = FALSE}
 tmp <- data_11_years %>% filter(inddea == 1) %>% group_by(cause113) %>% summarise(count = n()) %>% rename(freq = count)
 
@@ -162,7 +162,9 @@ ggplotly(overview)
 ### Data Wrangling to make it suitable for further Study.
 
 ### 5. Remove superset Data
-rm(list = c("data_11_years", "data_6a", "data_6b", "data_6c", "tobaccoUsers"))
+#rm(list = c("data_11_years", "data_6a", "data_6b", "data_6c", "tobaccoUsers"))
+rm(list = c("data_6a", "data_6b", "data_6c", "tobaccoUsers"))
+
 ```
 
 ```{r, include = FALSE}
@@ -246,10 +248,12 @@ table(suicides_11$educLevel)
 
 ```{r, include = FALSE}
 #### Group Industry into manual Labor Industry and Professional
-suicides_11$isManualLaborIndustry <- FALSE
+suicides_11$isManualLaborIndustry <- "Business"
 
-suicides_11$isManualLaborIndustry <- ifelse(suicides_11$majind %in% c(1:4, 14), TRUE, FALSE)
+suicides_11$isManualLaborIndustry <- ifelse(suicides_11$majind %in% c(1:4, 14), "Labour", "Business")
 
+suicides_11$isManualLaborIndustry <- as.factor(suicides_11$isManualLaborIndustry)
+levels(suicides_11$isManualLaborIndustry) <- c("Business", "Labour")
 table(suicides_11$isManualLaborIndustry)
 
 ```
@@ -539,9 +543,96 @@ levels(suicides_11$vt) <- c("Not a Veteran", "Veteran")
 
 #majority of Veterans are Non- Hispanics and White, Male, did not die in Hospital, and had Insurance- so lets validate the same data for missing values of Veteran.
 
-ggplot(suicides_11, aes(x = hisp, fill= vt)) + geom_bar() + labs(title = "Suicides w.r.t Hispanics region compared to being a Veteran")
-ggplot(suicides_11, aes(x = sex, fill = vt)) + geom_bar() + labs(title = "Suicides w.r.t Gender compared to being a Veteran")
-ggplot(suicides_11, aes(x = race, fill = vt)) + geom_bar() + theme(axis.text.x = element_text(angle = 45)) + labs(title = "Suicides w.r.t Race compared to being a Veteran")
+#ggplot(suicides_11, aes(x = hisp, fill= vt)) + geom_bar() + labs(title = "Suicides w.r.t Hispanics region compared to being a Veteran")
+#ggplot(suicides_11, aes(x = sex, fill = vt)) + geom_bar() + labs(title = "Suicides w.r.t Gender compared to being a Veteran")
+#ggplot(suicides_11, aes(x = race, fill = vt)) + geom_bar() + theme(axis.text.x = element_text(angle = 45)) + labs(title = "Suicides w.r.t Race compared to being a Veteran")
+
+
+ggplot(suicides_11, aes(x = hisp, y = race, shape = sex, colour = vt)) + geom_jitter(alpha = 0.5) + labs(title = "Suicides w.r.t being a Veteran") + theme(axis.text.x = element_text(angle = 45), legend.title = element_blank(), axis.ticks.x = element_blank())
+
+ggplotly()
+
+```
+
+#### Most of the Suicides have been found by people who are not a member of any Defence Forces.
+
+```{r, include= FALSE}
+### Encode States w.r.t Codes
+
+code <- c(11,12,13,14,15,16,21,22,23,31,32,33,34,35,41,42,43,44,45,46,47,51,52,53,54,55,56,57,58,59,61,62,63,64,71,72,73,74,81,82,83,84,85,86,87,88,91,92,93,94,95)
+
+state <- c("Maine","New Hampshire","Vermont","Massachusetts","Rhode Island","Connecticut","New York","New Jersey","Pennsylvania","Ohio","Indiana","Illinois","Michigan","Wisconsin","Minnesota","Iowa","Missouri","North Dakota","South Dakota","Nebraska","Kansas","Delaware","Maryland","District of Columbia","Virginia","West Virginia","North Carolina","South Carolina","Georgia","Florida","Kentucky","Tennessee","Alabama","Mississippi","Arkansas","Louisiana","Oklahoma","Texas","Montana","Idaho","Wyoming","Colorado","New Mexico","Arizona","Utah","Nevada","Washington","Oregon","California","Alaska","Hawaii")
+
+state_data <- data.frame(code, state)
+
+state_data$state <- as.character(state_data$state)
+
+```
+
+
+```{r, include = FALSE}
+glimpse(suicides_11)
+
+levels(suicides_11$incomeGroup)
+
+tmp <- suicides_11 %>% filter(vt == "Veteran" & !is.na(health)) %>% group_by(health) %>%  select(health, esr, stater, ageGroup, race, sex, ms, incomeGroup)
+
+ggplot(tmp, aes(x = health, y = ageGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5) + labs(title = "Veteran deaths w.r.t Age, Health, Employment, and Marital Status")
+ggplotly()
+
+ggplot(tmp, aes(x = health, y = incomeGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5)  + labs(title = "Veteran deaths w.r.t Income, Health, Employment, and Marital Status")
+ggplotly()
+
+ggplot(tmp, aes(y = ms, x = ageGroup, colour = health)) + geom_jitter() + theme(axis.text.x = element_text(angle = 45))
+ggplotly()
+
+```
+
+1. People below age of 35 years, hvaing Excellent health may be facing difficulties with their Intellectual Health.
+
+Can Government authorities do something here by initiaitng a Counselling with the Veterans to help them out?
+
+2. Disabled people with Poor Health also seem to be conrtibuting towards Suicide.
+
+Their Disability be due to any harm for their participation in any War. Could Goverment authorities taking better Care of them help out from losing their Lives?
+
+3. People with Income < 25k form the majority.
+
+Could Government increasing their Wages help them out from taking such actions?
+
+4. Never Married, and Separated are the least amongst Veterans. 
+
+  Could Marriages, losing the Partner or divorce be a factor leading People into some personal issues, eventually taking a toll on mental Health?
+  If yes, Married/ Divorced/ Widowed people could be focussed to undergo some Counselling sessions to help them out.
+  
+
+```{r, eval = FALSE}
+
+tmp <- merge(tmp, state_data, by.x="stater", by.y = "code")
+
+tmp$hover <- with(tmp, paste(state, '<br>', "Race: ", race, sex, "<br>",
+                           "Income Group: ", incomeGroup, "Age Group: ", ageGroup,
+                           "<br>", "Health Status: ", health))
+
+l <- list(color = toRGB("white"), width = 2)
+
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white')
+)
+
+p <- plot_geo(tmp, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~race, text = ~hover, locations = ~state,
+    color = ~race, colors = 'Purples'
+  ) %>%
+  colorbar(title = "Suicidal Reports") %>%
+  layout(
+    title = 'Suicides by Veterans in US',
+    geo = g
+  )
 
 ```
 
@@ -610,21 +701,93 @@ suicides_11$esr[suicides_11$ageGroup %in% c("35 - 44 years old", "45 - 54 years 
 ```
 
 ### An overview of people committing Suicides.
-```{r, message = FALSE, echo = FALSE, fig.height = 12}
-tmp_graph_1 <- ggplot(suicides_11, aes(x = race, y = age, col = ms, shape = sex)) + labs(x = "Race", y = "Age") + geom_jitter(alpha = 0.3) + theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45))
+```{r, message = FALSE, echo = FALSE}
+tmp_graph_1 <- ggplot(suicides_11, aes(x = race, y = age, col = ms, shape = sex)) + labs(x = "Race", y = "Age") + geom_jitter(alpha = 0.3) + theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust = ))
 
 ggplotly(tmp_graph_1)
 ```
 
 
-### Males are found to be in majority for commiting Suicides, with White,  Married, and Never Married topping the census. We'll study the individual contribution of these factors towards deducing the Survivability of any Subject.
+Whites have been the most out of Subjects committing Suicides, evenly spread across all Age Groups.
 
-### People educated till High School level 4 and having Salary less than 25k are the majority among Subjects.
+Males are found to be in majority for commiting Suicides, with White,  Married, and Never Married topping the census. We'll study the individual contribution of these factors towards deducing the Survivability of any Subject.
 
+
+```{r, include = FALSE}
+### Suicides w.r.t Race compared to the total population.
+
+data_11_years$inddea <- as.factor(data_11_years$inddea)
+levels(data_11_years$inddea) <- c("Alive", "Dead")
+
+ggplot(data_11_years, aes(x= race, y = inddea)) + geom_bar(stat = "identity")
+
+data_11_years$race <- as.factor(data_11_years$race)
+levels(data_11_years$race) <- levels(suicides_11$race)
+
+superset <- table(data_11_years$race)
+deaths <- table(data_11_years$race[data_11_years$inddea == 1])
+suicides <- table(suicides_11$race)
+
+superset <- as.data.frame(superset)
+colnames(superset) <- c("race", "Count")
+superset$data = "Superset"
+
+
+deaths <- as.data.frame(deaths)
+colnames(deaths) <- c("race", "Count")
+deaths$data = "Deaths"
+
+
+suicides <- as.data.frame(suicides)
+colnames(suicides) <- c("race", "Count")
+suicides$data = "Suicides"
+
+comparisonData <- rbind(deaths, suicides)
+comparisonData <- merge(superset, comparisonData, by = "race")
+colnames(comparisonData) <- c("race", "Total", "Count", "Source")
+
+ggplot(comparisonData, aes(y = Count, x = race, colour = data)) + geom_line()
+
+prop.table(comparisonData$Count * 100)
+
+tmp <- comparisonData %>% group_by(race) %>% mutate(variation = Count/Total * 100)
+
+barplot(tmp$variation[tmp$Source == "Suicides"], ylim = c(0, 100))
+
+barplot(tmp$variation[tmp$Source == "Suicides"])
+
+ggplot(tmp, aes(x = race, y = variation)) + geom_bar(stat = "identity") + theme(axis.)
+
+ggplot(tmp, aes())
+
+barplot(comparisonData$Count)
+
+
+```
+
+
+ 
 ```{r, message=FALSE, echo=FALSE}
 tmp_graph_2 <- ggplot(suicides_11, aes(x = incomeGroup, y = educLevel, col = isManualLaborIndustry, shape = urban)) + geom_jitter() + labs(title = "Suicides w.r.t Education Level, Income, Subjects residing in Urban Areas, and Working in a Labor industry") + xlab("Income Group") + ylab("Education Level") + theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45))
 
 ggplotly(tmp_graph_2)
+```
+
+People educated till High School level 4 and having Salary less than 25k are the majority among Subjects.
+
+```{r, include = FALSE}
+suicides_11$majocc <- as.factor(suicides_11$majocc)
+
+levels(suicides_11$majocc) <- c("Business", "Professional", "Service", "Sales", "Admin", "Farming", "Construction", "Mechanical", "Production", "Transportation", "Armed Forces")
+
+tmp <- suicides_11 %>% filter(educLevel == "H1 to H4", incomeGroup %in% c("Less Than 25k", "Between 25k and 50k"), !is.na(majocc))
+
+ggplot(tmp, aes(x = health, fill = incomeGroup)) + geom_bar() + theme(axis.text.x = element_text(angle = 45))
+
+ggplot(suicides_11[!is.na(suicides_11$majocc) & suicides_11$vt == "Veteran", ], aes(x = majocc, fill = educLevel)) + geom_bar() + theme(axis.text.x = element_text(angle = 45))
+
+levels(suicides_11$incomeGroup)
+
 ```
 
 
@@ -645,13 +808,15 @@ age_fit <- survfit(survObject ~ ageGroup, data = na.omit(select(suicides_11, age
 
 ggsurvplot(age_fit, pval = TRUE, main = "Survival w.r.t Age", break.time.by = 500,
            risk.table = TRUE, risk.table.height = 3, log.rank.weights = "survdiff",
-           surv.plot.height = 3, surv.scale = "percent")
+           surv.plot.height = 3, surv.scale = "percent", 
+           legend.labs = levels(suicides_11$ageGroup))
 
 #plot(age_fit, col = c(1 : length(unique(suicides_11$ageGroup))), lty = c(1 : length(unique(suicides_11$ageGroup))), lwd=3)
 #legend(500, .5, unique(suicides_11$ageGroup), lty = c(1: length(unique(suicides_11$ageGroup))), col = c(1 : length(unique(suicides_11$ageGroup))))
 
 ```
 
+People in age group > 75 years are found to be most Vulnerable of commiting Suicides. However, Youth in age group of 25 - 34 Years, are the majority in Count of commiting Suicides.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Survival w.r.t. Race
@@ -661,9 +826,12 @@ race_fit <- survfit(survObject ~ race, data = race_data)
 ggsurvplot(race_fit, pval = TRUE, main = "Survival w.r.t Race",
            risk.table = TRUE, risk.table.height = 2,
            surv.plot.height = 3,
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", 
+           legend.labs = levels(suicides_11$race))
 
 ```
+
+People of Race = Other Non- White are most vulnerable towards commiting Suicides, but Suicides appear to be in majority among the Whites.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Survival w.r.t Gender
@@ -673,9 +841,12 @@ gender_fit <- survfit(survObject ~ sex, data = gender_data)
 ggsurvplot(gender_fit, pval = TRUE, break.time.by = 500, main = "Survival w.r.t Gender",
            surv.plot.height = 2.50,
            risk.table = TRUE, risk.table.height = 1,
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", 
+           legend.labs = levels(suicides_11$sex))
 
 ```
+
+Males or Females are equaly vulnerable towards commiting Suicide, but Males outnumber Females for the Stats.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Survival w.r.t Marital Status
@@ -686,10 +857,13 @@ ggsurvplot(ms_fit, pval = TRUE, break.time.by = 1000,
            surv.plot.height = 3,
            risk.table = TRUE, risk.table.height = 3,
            log.rank.weights = "survdiff",
-           main = "Survival w.r.t Marital Status"
+           main = "Survival w.r.t Marital Status",
+           legend.labs = levels(suicides_11$ms)
            )
 
 ```
+
+Married people outnumber all others, but Widowed are most Vulnerable.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Survival w.r.t. Inflation Adjusted Income.
@@ -699,8 +873,13 @@ income_fit <- survfit(Surv(income_data$follow, income_data$event) ~ incomeGroup,
 ggsurvplot(income_fit, pval = TRUE, main = "Survival w.r.t Income",
            risk.table = TRUE, risk.table.height = 2,
            surv.plot.height = 3,
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", 
+           legend.labs = c("Less Than 25k", "Between 25k and 50k", "More than 75k"))
+
+
 ```
+
+People with Income less than 25k, are the most Vulnerable amongst the Working population.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Survival w.r.t Education
@@ -710,8 +889,11 @@ education_fit <- survfit(survObject ~ educLevel, data = educ_data)
 ggsurvplot(education_fit, pval = TRUE, main = "Survival w.r.t Highest Education Completed",
            risk.table = TRUE, risk.table.height = 2,
            surv.plot.height = 3,
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", legend.labs = levels(suicides_11$educLevel))
 ```
+
+People who have only completed the Elementaty Education seems to be most Vulnerable towards committing Suicides.
+However, majority is among the people attending High Schools.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Survival w.r.t Relationship of the Subject to reference person within the household.
@@ -721,8 +903,8 @@ rel_fit <- survfit(survObject ~ reltrf, data = rel_data)
 ggsurvplot(rel_fit, pval = TRUE, main = "Survival w.r.t Relationship of Subject with other people in Household",
            risk.table = TRUE, risk.table.height = 2,
            surv.plot.height = 3,
-           log.rank.weights = "survdiff")
-
+           log.rank.weights = "survdiff", 
+           legend.labs = levels(suicides_11$reltrf))
 
 ```
 
@@ -736,11 +918,15 @@ labor_fit <- survfit(survObject ~ isManualLaborIndustry, data = labor_data)
 ggsurvplot(labor_fit, pval = TRUE, main = "Survival w.r.t Being involved in Manual Labor Industry",
            risk.table = TRUE, risk.table.height = 2,
            surv.plot.height = 3, 
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", 
+           legend.labs = levels(suicides_11$isManualLaborIndustry))
 
 
 ```
 
+
+Majority of the subjects are found to be working in an Industry not needing Manual Labour.
+Vulnerability of both the groups, however, is similar.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Plotting Survival w.r.t Employment
@@ -750,9 +936,12 @@ employment_fit <- survfit(Surv(esr_data$follow, esr_data$event) ~ esr, data = es
 ggsurvplot(employment_fit, pval = TRUE, main = "Survival w.r.t Employment",
            risk.table = TRUE, risk.table.height = 2,
            surv.plot.height = 3,
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", 
+           legend.labs = levels(suicides_11$esr))
 
 ```
+
+Unemployed people tend to be most vulnerable towards Suicide, but are outnumbered by Employed for records.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Survival w.r.t people being Hispanic.
@@ -764,24 +953,33 @@ hisp_fit <- survfit(survObject ~ hisp, data = hisp_data)
 ggsurvplot(hisp_fit, pval = TRUE, main = "Survival w.r.t Being Hispanic",
            risk.table = TRUE, risk.table.height = 2,
            surv.plot.height = 3,
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", 
+           legend.labs = levels(suicides_11$hisp))
 ```
+Other Hispanics being most vulnerable are outnumbered by Non- Hispanics.
+
 ```{r, echo = FALSE, message = FALSE}
 #### Survival w.r.t Type of Health Insurance
 
 insurance_data <- select(suicides_11, follow, event, hitype) %>% filter(!is.na(hitype))
 
-insurance_data$insured <- FALSE
-insurance_data$insured <- ifelse(insurance_data$hitype == 0, FALSE, TRUE)
+insurance_data$insured <- "Not Insured"
+insurance_data$insured <- ifelse(insurance_data$hitype == 0, "Not Insured", "Insured")
+
+insurance_data$insured <- as.factor(insurance_data$insured)
+levels(insurance_data$insured) <- c("Not Insured", "Insured")
 
 insurance_fit <- survfit(Surv(insurance_data$follow, insurance_data$event) ~ insured, data = insurance_data)
 
 ggsurvplot(insurance_fit, pval = TRUE, main = "Survival w.r.t Type of Insurance",
            surv.plot.height = 3, surv.scale = "percent",
            risk.table = TRUE, risk.table.height = 2,
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", legend.labs = levels(insurance_data$insured))
 
 ```
+
+People with Insurance are somewhat less resilient against Suicides, but are outnumbered by people not Insured.
+
 
 ```{r, echo=FALSE, message = FALSE}
 #### Survival w.r.t living in a Urban or Rural area.
@@ -791,10 +989,12 @@ urban_fit <- survfit(survObject ~ urban, data = urban_data)
 ggsurvplot(urban_fit, surv.plot.height = 3, surv.scale = "percent", 
            main = "Survival w.r.t. Living in Rural or Urban area", 
            risk.table = TRUE, risk.table.height = 2, 
-           log.rank.weights = "survdiff")
+           log.rank.weights = "survdiff", legend.labs = levels(suicides_11$urban))
 ```
 
-```{r, echo=FALSE, message = FALSE}
+People living in Urban areas outnumber Rural population for Suicides.
+
+```{r, echo=FALSE, message = FALSE, eval = FALSE}
 #### Survival w.r.t type of Ownership of the Residence
 #table(suicides_11$tenure)
 #sum(is.na(suicides_11$tenure))
@@ -802,7 +1002,9 @@ ggsurvplot(urban_fit, surv.plot.height = 3, surv.scale = "percent",
 #suicides_11 %>% filter(is.na(tenure)) %>% select(ageGroup, sex, ms, race, stater, citizen)
 # all the missing values of 'type of Ownership belongs to people born Abroad', out of which 90% are White.
 
-#suicides_11 %>% filter(ageGroup == "Under 12 Years" & race == "White" & citizen == "Born Abroad") %>% group_by(as.integer(citizen)) %>% summarise(tenure = count(as.character(tenure)))
+tmp <- suicides_11
+tmp$tenure <- as.character(tmp$tenure)
+#tmp %>% filter(ageGroup == "Under 12 Years" & race == "White" & citizen == "Born Abroad") %>% group_by(citizen) %>% summarise(tenure = count(tenure))
 
 #1	Residence is owned by householder
 #2	Residence is rented by householder
@@ -842,8 +1044,11 @@ citizen_fit <- survfit(survObject ~ citizen, data = citizen_data)
 ggsurvplot(citizen_fit, pval = TRUE, log.rank.weights = "survdiff",
            risk.table = TRUE, risk.table.height = 2,
            surv.plot.height = 3, surv.scale = "percent",
-           main = "Survival w.r.t Citizenship")
+           main = "Survival w.r.t Citizenship", 
+           legend.labs = levels(citizen_data$citizen))
 ```
+
+People born in US are less resilient against Suicide, and are outnumbered by people Born Abroad.
 
 ```{r, echo = FALSE, message = FALSE}
 #### Survival w.r.t Health Status
@@ -852,9 +1057,12 @@ health_fit <- survfit(survObject ~ health, data = health_data)
 
 ggsurvplot(health_fit, surv.plot.height = 3, pval = TRUE, main = "Survival w.r.t. Health Status",
            risk.table = TRUE, risk.table.height = 2,
-           log.rank.weights = "survdiff"
+           log.rank.weights = "survdiff", 
+           legend.labs = levels(suicides_11$health)
            )
 ```
+
+People with average health are least resilient but are outnumbered by people with Excellent Health.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Plotting Survival w.r.t being a Veteran
@@ -864,10 +1072,12 @@ veteran_fit <- survfit(survObject ~ vt, data = vet_data)
 ggsurvplot(veteran_fit, pval = TRUE, break.time.by = 500, log.rank.weights = "survdiff",
            risk.table = TRUE, risk.table.height = 1,
            surv.plot.height = 2.5, surv.scale = "percent",
-           main = "Survival w.r.t being a Veteran")
+           main = "Survival w.r.t being a Veteran", legend.labs = levels(suicides_11$vt))
 
 #rm(list = c("age_fit", "race_data", "race_fit", "gender_data", "gender_fit", "ms_data", "ms_fit", "income_data", "income_fit", "educ_data", "education_fit", "rel_data", "rel_fit", "labor_data", "labor_fit", "esr_data", "employment_fit", "hisp_data", "hisp_fit", "insurance_data", "insurance_fit", "urban_data", "urban_fit", "citizen_data", "citizen_fit", "health_data", "health_fit"))
 ```
+
+People who are not linked to any Defence Forces are the majority among people commiting Suicides.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Plotting Survival w.r.t marital Status, Gender, and Race
@@ -877,6 +1087,9 @@ ms_gender_fit <- survfit(Surv(tmp_data$follow, tmp_data$event) ~ ms + sex + race
 ggsurvplot(ms_gender_fit, pval = TRUE, main = "Survival w.r.t Marital Status and Gender", break.time.by = 500,
            risk.table = TRUE, risk.table.height = 4, log.rank.weights = "survdiff",
            surv.plot.height = 0, surv.scale = "percent")
+
+merge(data.frame(A = suicides_11$ms), data.frame(B = suicides_11$sex), data.frame(C = suicides_11$race), all = TRUE)
+
 
 ```
 
@@ -903,9 +1116,9 @@ ggsurvplot(economic_fit, pval = TRUE, main = "Survival w.r.t Highest Degree Atta
 demographics_data <- na.omit(select(suicides_11, event, follow, hisp, citizen))
 demographics_fit <- survfit(survObject ~ hisp + citizen, data = demographics_data)
 
-ggsurvplot(demographics_fit, pval = TRUE, main = "Survival w.r.t Highest Degree Attained and Income", break.time.by = 500, surv.plot.height = 4, surv.scale = "percent")
+ggsurvplot(demographics_fit, pval = TRUE, main = "Survival w.r.t Hispanic, and Citizen", break.time.by = 500, surv.plot.height = 4, surv.scale = "percent")
 
-ggsurvplot(demographics_fit, pval = TRUE, main = "Survival w.r.t Highest Degree Attained and Income", break.time.by = 500,
+ggsurvplot(demographics_fit, pval = TRUE, main = "Survival w.r.t Hispanic, and Citizen", break.time.by = 500,
            risk.table = TRUE, risk.table.height = 4, log.rank.weights = "survdiff",
            surv.plot.height = 0, surv.scale = "percent")
 
