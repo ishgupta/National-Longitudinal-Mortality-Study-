@@ -719,7 +719,7 @@ Males are found to be in majority for commiting Suicides, with White,  Married, 
 data_11_years$inddea <- as.factor(data_11_years$inddea)
 levels(data_11_years$inddea) <- c("Alive", "Dead")
 
-ggplot(data_11_years, aes(x= race, y = inddea)) + geom_bar(stat = "identity")
+#ggplot(data_11_years, aes(x= race, y = inddea)) + geom_bar(stat = "identity")
 
 data_11_years$race <- as.factor(data_11_years$race)
 levels(data_11_years$race) <- levels(suicides_11$race)
@@ -735,33 +735,17 @@ superset$data = "Superset"
 
 deaths <- as.data.frame(deaths)
 colnames(deaths) <- c("race", "Count")
-deaths$data = "Deaths"
-
 
 suicides <- as.data.frame(suicides)
 colnames(suicides) <- c("race", "Count")
-suicides$data = "Suicides"
 
-comparisonData <- rbind(deaths, suicides)
+comparisonData <- suicides
 comparisonData <- merge(superset, comparisonData, by = "race")
-colnames(comparisonData) <- c("race", "Total", "Count", "Source")
+comparisonData <- merge(comparisonData, deaths, by = "race")
 
-ggplot(comparisonData, aes(y = Count, x = race, colour = data)) + geom_line()
+colnames(comparisonData) <- c("race", "Total", "Suicides", "Deaths")
 
-prop.table(comparisonData$Count * 100)
-
-tmp <- comparisonData %>% group_by(race) %>% mutate(variation = Count/Total * 100)
-
-barplot(tmp$variation[tmp$Source == "Suicides"], ylim = c(0, 100))
-
-barplot(tmp$variation[tmp$Source == "Suicides"])
-
-ggplot(tmp, aes(x = race, y = variation)) + geom_bar(stat = "identity") + theme(axis.)
-
-ggplot(tmp, aes())
-
-barplot(comparisonData$Count)
-
+ggplot(comparisonData, aes(x = race, y = Suicides) ) + geom_bar(stat = "identity")
 
 ```
 
@@ -1088,7 +1072,7 @@ ggsurvplot(ms_gender_fit, pval = TRUE, main = "Survival w.r.t Marital Status and
            risk.table = TRUE, risk.table.height = 4, log.rank.weights = "survdiff",
            surv.plot.height = 0, surv.scale = "percent")
 
-merge(data.frame(A = suicides_11$ms), data.frame(B = suicides_11$sex), data.frame(C = suicides_11$race), all = TRUE)
+#merge(data.frame(A = suicides_11$ms), data.frame(B = suicides_11$sex), data.frame(C = suicides_11$race), all = TRUE)
 
 
 ```
