@@ -18,7 +18,6 @@ National Longitudinal Mortality Survey was a follow up done with a set of popula
 
 ### 1. Load required Libraries
 
-
 library(readr)
 library(data.table)
 library(tidyr)
@@ -27,6 +26,7 @@ library(ggplot2)
 library(survival)
 library(survminer)
 library(plotly)
+library(cowplot)
 ```
 
 ```{r, include = FALSE}
@@ -148,6 +148,7 @@ suicides_tu <- tobaccoUsers[tobaccoUsers$cause113 %in% c(105, 106), ]
 ```
 
 Let's see an overall picture for the Loss of lives recorded in this Survey of 11 years, and compare it to the amount of Suicides. In our Study, we'll be focussing on finding the Driving factors for people committing Suicide.
+
 ```{r, fig.width=7, fig.height=5, echo= FALSE, message = FALSE}
 tmp <- data_11_years %>% filter(inddea == 1) %>% group_by(cause113) %>% summarise(count = n()) %>% rename(freq = count)
 
@@ -216,8 +217,6 @@ suicides_11$ageGroup <- ifelse(between(suicides_11$age, 0, 11), "Under 12 Years"
 
 suicides_11$ageGroup <- factor(suicides_11$ageGroup)
 
-table(suicides_11$ageGroup)
-
 ```
 
 ```{r, include = FALSE}
@@ -242,7 +241,14 @@ suicides_11$educLevel <- ifelse(suicides_11$educ %in% c(1:4), "Upto E8",
 
 suicides_11$educLevel <- factor(suicides_11$educLevel, levels = c("NA", "Upto E8", "H1 to H4", "C1 to C6"))
 
-table(suicides_11$educLevel)
+data_11_years$educLevel <- "NA"
+data_11_years$educLevel <- ifelse(data_11_years$educ %in% c(1:4), "Upto E8",
+                                ifelse(data_11_years$educ %in% c(5:8), "H1 to H4",
+                                       ifelse(data_11_years$educ %in% c(9:14), "C1 to C6", "NA")))
+
+data_11_years$educLevel <- factor(data_11_years$educLevel, levels = c("NA", "Upto E8", "H1 to H4", "C1 to C6"))
+
+table(data_11_years$educLevel)
 
 ```
 
@@ -495,7 +501,7 @@ suicides_11$adjinc <- factor(suicides_11$adjinc)
 
 ```
 
-```{r, message = FALSE, fig.width= 7, fig.height=5, echo = FALSE}
+```{r, message = FALSE, echo = FALSE}
 #### Impute veteran w.r.t Age
 #unique(suicides_11$vt)
 #table(suicides_11$age[suicides_11$vt==1])
@@ -556,7 +562,7 @@ ggplotly(tmp_graph)
 
 Most of the Suicides have been found by people who are not a member of any Defence Forces.
 
-```{r, echo = FALSE, message = FALSE, include= FALSE}
+```{r, eval = FALSE, echo = FALSE, message = FALSE, include= FALSE}
 ### Encode States w.r.t Codes
 
 code <- c(11,12,13,14,15,16,21,22,23,31,32,33,34,35,41,42,43,44,45,46,47,51,52,53,54,55,56,57,58,59,61,62,63,64,71,72,73,74,81,82,83,84,85,86,87,88,91,92,93,94,95)
@@ -570,20 +576,23 @@ state_data$state <- as.character(state_data$state)
 ```
 
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, message = FALSE}
 # Look onto find some Questions for Veterans.
 tmp <- suicides_11 %>% filter(vt == "Veteran" & !is.na(health)) %>% group_by(health) %>%  select(health, esr, stater, ageGroup, race, sex, ms, incomeGroup)
 
-aTmp <- ggplot(tmp, aes(x = health, y = ageGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5) + labs(title = "Veteran deaths w.r.t Age, Health, Employment, and Marital Status") + theme(legend.title = element_text("Marital Status"))
-ggplotly(aTmp)
+#aTmp <- 
+  ggplot(tmp, aes(x = health, y = ageGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5) + labs(title = "Veteran deaths w.r.t Age, Health, Employment, and Marital Status") + theme(legend.title = element_text("Marital Status"))
+#ggplotly(aTmp)
 
-bTmp <- ggplot(tmp, aes(x = health, y = incomeGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5)  + labs(title = "Veteran deaths w.r.t Income, Health, Employment, and Marital Status") + theme(legend.title = element_text("Type of Work"))
-ggplotly(bTmp)
+#bTmp <- 
+  ggplot(tmp, aes(x = health, y = incomeGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5)  + labs(title = "Veteran deaths w.r.t Income, Health, Employment, and Marital Status") + theme(legend.title = element_text("Type of Work"))
+#ggplotly(bTmp)
 
-cTmp <- ggplot(tmp, aes(y = ms, x = ageGroup, colour = health)) + geom_jitter() + theme(axis.text.x = element_text(angle = 45)) + theme(legend.title = element_text("Health"))
-ggplotly(cTmp)
+#cTmp <- 
+  ggplot(tmp, aes(y = ms, x = ageGroup, colour = health)) + geom_jitter() + theme(axis.text.x = element_text(angle = 45)) + theme(legend.title = element_text("Health"))
+#ggplotly(cTmp)
 
-rm(list = c("aTmp", "bTmp", "cTmp"))
+#rm(list = c("aTmp", "bTmp", "cTmp"))
 
 ```
 
@@ -749,15 +758,61 @@ tmp <- tmp[, -c(2:4)]
 
 tmp_consolidated <- melt(tmp)
 
-tmp$updatedValue <- 100
-tmp$updatedValue[tmp$variable == "Suicides"] <- tmp$value
+#tmp$updatedValue <- 100
+#tmp$updatedValue[tmp$variable == "Suicides"] <- tmp$value
 
 tmp_1 <- melt(tmp)
 
 ggplot(tmp_1, aes(race, value)) + geom_bar(aes(fill = variable), position = "dodge", stat= "identity") + labs(title = "Suicides compared to Deaths per Race in %age", x = "Race", y = "%age") + theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45)) + scale_fill_discrete(labels = c("Suicides", "Deaths"))
 
+
 ```
 
+The data shows that Whites are the ones committing most of the Suicides, but comparitively there is more %age of the 'American Indian or Alaskan' population committing Suicides.
+ 
+```{r, echo = FALSE, message = FALSE}
+# American Indian or Alaskan committing Suicides:
+
+tmpRace = "American Indian or Alaskan"
+
+data_11_years$majocc <- as.factor(data_11_years$majocc)
+
+levels(data_11_years$majocc) <- c("Business", "Professional", "Service", "Sales", "Admin", "Farming", "Construction", "Mechanical", "Production", "Transportation", "Armed Forces")
+
+suicides_11$majocc <- as.factor(suicides_11$majocc)
+levels(suicides_11$majocc) <- c("Business", "Professional", "Service", "Sales", "Admin", "Farming", "Construction", "Mechanical", "Production", "Transportation", "Armed Forces")
+
+
+a <- ggplot(data_11_years[!is.na(data_11_years$majocc) & data_11_years$race != "White" & data_11_years$inddea == "Dead" & !is.na(data_11_years$race), ], aes(x = majocc, fill = race)) + geom_bar(position = "dodge") + theme(axis.text.x = element_text(angle = 45)) + labs(title = "Deaths w.r.t Occupation, and Non-White Population", x = "Industry", y = "Number of Incidents")
+
+b <- ggplot(suicides_11[!is.na(suicides_11$majocc) & suicides_11$educLevel != "NA" & suicides_11$race != "White", ], aes(x = majocc, fill = race)) + geom_bar(position = "dodge") + theme(axis.text.x = element_text(angle = 45)) + labs(title = "Suicides w.r.t Occupation, and Non-White Population", x = "Industry", y = "Number of Incidents")
+
+alaskanSuicides <- suicides_11 %>% filter(race == tmpRace & !is.na(majocc)) %>% select(educLevel, majocc) %>% group_by(educLevel, majocc) %>% mutate(Count = n()) %>%  unique
+
+alaskanDeaths <- data_11_years %>% filter(race == tmpRace & !is.na(majocc) & inddea == "Dead" & !is.na(race)) %>% select(educLevel, majocc) %>% group_by(educLevel, majocc) %>% mutate(Count = n()) %>%  unique
+
+alaskanPopulation <- data_11_years %>% filter(race == tmpRace & !is.na(majocc)) %>% select(educLevel, majocc)  %>% group_by(educLevel, majocc) %>% mutate(Count = n()) %>%  unique
+
+alaskan <- merge(alaskanSuicides, alaskanDeaths, by = c("educLevel", "majocc"))
+
+alaskan <- merge(alaskan, alaskanPopulation, by= c("educLevel", "majocc"))
+
+colnames(alaskan) <- c("Education", "Occupation", "Suicides", "Deaths", "Population")
+
+alaskan <- melt(alaskan)
+colnames(alaskan) <- c("Education", "Occupation", "Data", "Count")
+
+c <- ggplot(alaskan, aes(Occupation, Count)) + geom_bar(aes(fill = Data), position = "dodge", stat = "identity") + labs(title = "Occupation impacts") + theme(axis.text.x = element_text(angle = 45))
+
+d <- ggplot(alaskan[alaskan$Data != "Population", ], aes(Education, Count)) + geom_bar(aes(fill = Data), position = "dodge", stat = "identity") + labs (title = "Education impacts")
+
+plot_grid(a,b, ncol = 1)
+plot_grid(c,d, ncol = 1)
+
+```
+There are 2 areas- Service, and Production which should be looked into for the maximum number of Deaths, and Suicides, respectively.
+American Indian or Alaskan people have committed most of the Suicides in Production, and Construction related Work areas.
+However, American Indians or Alaskans did not commit Suicide who worked for Business, Sales, Farming, and Armed Forces.
 
  
 ```{r, message=FALSE, echo=FALSE, include= FALSE}
@@ -773,16 +828,23 @@ suicides_11$majocc <- as.factor(suicides_11$majocc)
 
 levels(suicides_11$majocc) <- c("Business", "Professional", "Service", "Sales", "Admin", "Farming", "Construction", "Mechanical", "Production", "Transportation", "Armed Forces")
 
-tmp <- suicides_11 %>% filter(educLevel == "H1 to H4", incomeGroup %in% c("Less Than 25k", "Between 25k and 50k"), !is.na(majocc))
+tmp <- suicides_11 %>% filter(educLevel == "H1 to H4", incomeGroup %in% c("Less Than 25k", "Between 25k and 50k"), !is.na(majocc), !is.na(health))
 
-ggplot(tmp, aes(x = health, fill = incomeGroup)) + geom_bar() + theme(axis.text.x = element_text(angle = 45))
+ggplot(tmp, aes(x = incomeGroup, fill = race)) + geom_bar() + theme(axis.text.x = element_text(angle = 45))
+ggplot(tmp, aes(x = health, fill = majocc)) + geom_bar() + theme(axis.text.x = element_text(angle = 45))
 
-ggplot(suicides_11[!is.na(suicides_11$majocc) & suicides_11$vt == "Veteran", ], aes(x = majocc, fill = educLevel)) + geom_bar() + theme(axis.text.x = element_text(angle = 45))
-
-levels(suicides_11$incomeGroup)
+ggplot(suicides_11[!is.na(suicides_11$majocc) & suicides_11$vt == "Veteran", ], aes(x = majocc, fill = educLevel)) + geom_bar() + theme(axis.text.x = element_text(angle = 45)) + labs(title = "Suicides w.r.t Occupation, and Education", x = "Industry", y = "Number of Incidents")
 
 ```
 
+People with High School Education of level- H1 to H4 can be found in every Profession. But, most of them losing their Lives are in Construction, and Transportation Business.
+
+Also, people with higher Education level of C1 to C6 are least involved in Farming Business, maybe because they move to Metro cities. 
+And most of them (Engineers, Scientists, Lawyers, Judicial Workers, Judges, Teachers, Musicians, Artists, Photographers, Doctors, Pharmacists).
+
+Could this be because of Work pressure they have to bear because of an higher level of Job they are pursuing?
+Could it be helpful to incorporate a Subject in the Education System, which could help people understand and manage Mental pressures?
+Majority of the Subjects had Insurance subscribed from their Employer.
 
 ### Survival Analysis on Suicides.
 ```{r, include = FALSE}
