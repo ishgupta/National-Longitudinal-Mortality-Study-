@@ -6,7 +6,6 @@ output:
     echo: no
     fig_height: 8
     fig_width: 10
-    message: no
   pdf_document: default
 ---
 
@@ -558,6 +557,8 @@ tmp_graph <- ggplot(suicides_11, aes(x = hisp, y = race, shape = sex, colour = v
 
 ggplotly(tmp_graph)
 
+
+rm(tmp_graph)
 ```
 
 Most of the Suicides have been found by people who are not a member of any Defence Forces.
@@ -580,24 +581,17 @@ state_data$state <- as.character(state_data$state)
 # Look onto find some Questions for Veterans.
 tmp <- suicides_11 %>% filter(vt == "Veteran" & !is.na(health)) %>% group_by(health) %>%  select(health, esr, stater, ageGroup, race, sex, ms, incomeGroup)
 
-#aTmp <- 
-  ggplot(tmp, aes(x = health, y = ageGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5) + labs(title = "Veteran deaths w.r.t Age, Health, Employment, and Marital Status") + theme(legend.title = element_text("Marital Status"))
-#ggplotly(aTmp)
+ggplot(tmp, aes(x = health, y = ageGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5) + labs(title = "Veteran deaths w.r.t Age, Health, Employment, and Marital Status") + theme(legend.title = element_text("Marital Status"))
 
-#bTmp <- 
-  ggplot(tmp, aes(x = health, y = incomeGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5)  + labs(title = "Veteran deaths w.r.t Income, Health, Employment, and Marital Status") + theme(legend.title = element_text("Type of Work"))
+ggplot(tmp, aes(x = health, y = incomeGroup, colour = esr, shape = ms)) + geom_jitter(alpha = 0.5)  + labs(title = "Veteran deaths w.r.t Income, Health, Employment, and Marital Status") + theme(legend.title = element_text("Type of Work"))
 #ggplotly(bTmp)
 
-#cTmp <- 
-  ggplot(tmp, aes(y = ms, x = ageGroup, colour = health)) + geom_jitter() + theme(axis.text.x = element_text(angle = 45)) + theme(legend.title = element_text("Health"))
-#ggplotly(cTmp)
-
-#rm(list = c("aTmp", "bTmp", "cTmp"))
+ggplot(tmp, aes(y = ms, x = ageGroup, colour = health)) + geom_jitter() + theme(axis.text.x = element_text(angle = 45)) + theme(legend.title = element_text("Health"))
 
 ```
 
 
-1. People below age of 35 years, having Excellent health may be facing difficulties with their Intellectual Health.
+1. People below age of 35 years, having Excellent health, may be facing difficulties with their Intellectual Health.
 
 Can Government authorities do something here by initiaitng a Counselling with the Veterans to help them out?
 
@@ -950,7 +944,7 @@ ggsurvplot(education_fit, pval = TRUE, main = "Survival w.r.t Highest Education 
 People who have only completed the Elementaty Education seems to be most Vulnerable towards committing Suicides.
 However, majority is among the people attending High Schools.
 
-```{r, echo=FALSE, message = FALSE}
+```{r, eval = FALSE}
 #### Survival w.r.t Relationship of the Subject to reference person within the household.
 rel_data <- select(suicides_11, follow, event, reltrf)
 rel_fit <- survfit(survObject ~ reltrf, data = rel_data)
@@ -963,7 +957,7 @@ ggsurvplot(rel_fit, pval = TRUE, main = "Survival w.r.t Relationship of Subject 
 
 ```
 
-```{r, echo=FALSE, message = FALSE}
+```{r, eval = FALSE}
 #### Survival w.r.t working or Not?
 #table(suicides_11$majind)
 
@@ -976,12 +970,12 @@ ggsurvplot(labor_fit, pval = TRUE, main = "Survival w.r.t Being involved in Manu
            log.rank.weights = "survdiff", 
            legend.labs = levels(suicides_11$isManualLaborIndustry))
 
+#Majority of the subjects are found to be working in an Industry not needing Manual Labour.
+#Vulnerability of both the groups, however, is similar.
 
 ```
 
 
-Majority of the subjects are found to be working in an Industry not needing Manual Labour.
-Vulnerability of both the groups, however, is similar.
 
 ```{r, echo=FALSE, message = FALSE}
 #### Plotting Survival w.r.t Employment
@@ -998,7 +992,7 @@ ggsurvplot(employment_fit, pval = TRUE, main = "Survival w.r.t Employment",
 
 Unemployed people tend to be most vulnerable towards Suicide, but are outnumbered by Employed for records.
 
-```{r, echo=FALSE, message = FALSE}
+```{r, eval = FALSE}
 #### Survival w.r.t people being Hispanic.
 #table(suicides_11$hisp)
 
@@ -1010,10 +1004,11 @@ ggsurvplot(hisp_fit, pval = TRUE, main = "Survival w.r.t Being Hispanic",
            surv.plot.height = 3,
            log.rank.weights = "survdiff", 
            legend.labs = levels(suicides_11$hisp))
+# Other Hispanics being most vulnerable are outnumbered by Non- Hispanics.
 ```
-Other Hispanics being most vulnerable are outnumbered by Non- Hispanics.
 
-```{r, echo = FALSE, message = FALSE}
+
+```{r, eval = FALSE}
 #### Survival w.r.t Type of Health Insurance
 
 insurance_data <- select(suicides_11, follow, event, hitype) %>% filter(!is.na(hitype))
@@ -1031,9 +1026,10 @@ ggsurvplot(insurance_fit, pval = TRUE, main = "Survival w.r.t Type of Insurance"
            risk.table = TRUE, risk.table.height = 2,
            log.rank.weights = "survdiff", legend.labs = levels(insurance_data$insured))
 
+#People with Insurance are somewhat less resilient against Suicides, but are outnumbered by people not Insured.
 ```
 
-People with Insurance are somewhat less resilient against Suicides, but are outnumbered by people not Insured.
+
 
 
 ```{r, echo=FALSE, message = FALSE}
@@ -1044,7 +1040,7 @@ urban_fit <- survfit(survObject ~ urban, data = urban_data)
 ggsurvplot(urban_fit, surv.plot.height = 3, surv.scale = "percent", 
            main = "Survival w.r.t. Living in Rural or Urban area", 
            risk.table = TRUE, risk.table.height = 2, 
-           log.rank.weights = "survdiff", legend.labs = levels(suicides_11$urban))
+           log.rank.weights = "survdiff", legend.labs = levels(suicides_11$urban), pval = TRUE)
 ```
 
 People living in Urban areas outnumber Rural population for Suicides.
@@ -1119,7 +1115,7 @@ ggsurvplot(health_fit, surv.plot.height = 3, pval = TRUE, main = "Survival w.r.t
 
 People with average health are least resilient but are outnumbered by people with Excellent Health.
 
-```{r, echo=FALSE, message = FALSE}
+```{r, eval = FALSE}
 #### Plotting Survival w.r.t being a Veteran
 vet_data  = na.omit(select(suicides_11, follow, event, vt) %>% filter(!is.na(vt)))
 veteran_fit <- survfit(survObject ~ vt, data = vet_data)
@@ -1129,9 +1125,10 @@ ggsurvplot(veteran_fit, pval = TRUE, break.time.by = 500, log.rank.weights = "su
            surv.plot.height = 2.5, surv.scale = "percent",
            main = "Survival w.r.t being a Veteran", legend.labs = levels(suicides_11$vt))
 
+#People who are not linked to any Defence Forces are the majority among people commiting Suicides.
 ```
 
-People who are not linked to any Defence Forces are the majority among people commiting Suicides.
+
 
 ```{r, echo=FALSE, message = FALSE}
 #### Plotting Survival w.r.t marital Status, Gender, and Race
