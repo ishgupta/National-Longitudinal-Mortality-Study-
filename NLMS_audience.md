@@ -1,13 +1,8 @@
 ---
 title: "Factors driving US population towards Suicide"
 output:
-  html_document:
-    fig_height: 8
-    fig_width: 10
-    
-  pdf_document:
-    keep_tex: yes
-always_allow_html: yes
+  md_document:
+    variant: markdown_github
 ---
 
 Anyone who has Born, has to Die! Everyone has their own Excuse of giving up this Life.
