@@ -5,12 +5,12 @@ A Survival analysis study intended to study the Suicides committed by US populat
 The data being referred was made available by the National Longitudinal mortality Survey conducted for over 11 years of follow up. The study was sponsored by National Cancer Institute, the National Heart, Lung, and Blood Institute, the National Institute on Aging, the National Center for Health Statistics and the U.S. Census Bureau for the purpose of studying the effects of differentials in demographic and socio-economic characteristics on mortality.
 
 US is a huge country with people from all over the World. 
-	- Is their Origin an issue driving them towards Suicide?	
-	- Could Employment, workplace, Income, Ecucation be a reason?
-	- Are Females feeling outcasted at Workplace/ Home ?
-	- Are people living in Urban areas more affected?
-	- Are Veterans driven by PTSD to commit a Suicide?
-	- Did Whites commit most of the Suicides?
+ 1. Is their Origin an issue driving them towards Suicide?	
+ 2. Could Employment, workplace, Income, Ecucation be a reason?
+ 3. Are Females feeling outcasted at Workplace/ Home ?
+ 4. Are people living in Urban areas more affected?
+ 5. Are Veterans driven by PTSD to commit a Suicide?
+ 6. Did Whites commit most of the Suicides?
 
 And many more questions... can be observed when we think about people committing an act to give up on their Lives.
 
