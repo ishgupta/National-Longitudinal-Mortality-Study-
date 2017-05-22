@@ -4,9 +4,9 @@ A Survival analysis study intended to study the Suicides committed by US populat
 
 The data being referred was made available by the National Longitudinal mortality Survey conducted for over 11 years of follow up. The study was sponsored by National Cancer Institute, the National Heart, Lung, and Blood Institute, the National Institute on Aging, the National Center for Health Statistics and the U.S. Census Bureau for the purpose of studying the effects of differentials in demographic and socio-economic characteristics on mortality.
 
-US is a huge country with people from all over the World. 
+US is a huge country housing people from all over the World, and there can be multiple reasons for an Individual to give up on his/her Life:
  1. Is their Origin an issue driving them towards Suicide?	
- 2. Could Employment, workplace, Income, Ecucation be a reason?
+ 2. Could Employment, workplace, Income, Education be a reason?
  3. Are Females feeling outcasted at Workplace/ Home ?
  4. Are people living in Urban areas more affected?
  5. Are Veterans driven by PTSD to commit a Suicide?
